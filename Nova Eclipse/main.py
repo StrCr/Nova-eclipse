@@ -2,10 +2,12 @@ import pygame
 import math
 import sys
 import os
+import json
+import random
 
 # Game settings
 pygame.init()
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1000, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Nova Eclipse")
 FPS = 60
@@ -14,17 +16,22 @@ clock = pygame.time.Clock()
 # Colour
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-MALINA = (220, 20, 60)
+YELLOW = (255, 255, 0)
 GREEN = (0, 255, 0)
 
-# Hex settings
-HEX_RADIUS = 30
+# Hex settings # переместить константы внутрь кода
+HEX_RADIUS = 35
 HEX_WIDTH = math.sqrt(3) * HEX_RADIUS
 HEX_HEIGHT = 2 * HEX_RADIUS
 X_OFFSET = HEX_WIDTH
 Y_OFFSET = HEX_HEIGHT * 3 / 4
 CENTER_CORDS = (WIDTH // 2, HEIGHT // 2)
 MAP_RADIUS = 6
+INDENT = 10
+
+# Saves
+SAVE_DIR = "saves"
+os.makedirs(SAVE_DIR, exist_ok=True)
 
 
 def load_image(name, colorkey=None):
@@ -41,9 +48,13 @@ def load_image(name, colorkey=None):
     return image
 
 
-def terminate():
-    pygame.quit()
-    sys.exit()
+hex_images = {
+    'sun': load_image('Sun_Red.png'),
+    'planet': load_image('planet_Cloudy.png')
+}
+
+
+# player_image = load_image('mar.png')
 
 
 def get_hex_points(center_x, center_y, radius):
@@ -58,42 +69,85 @@ def get_hex_points(center_x, center_y, radius):
 
 class HexMap:
     def __init__(self, center_cords, radius):
-        self.hexagons = []
-        # self.q_hexagons = []
-        # self.r_hexagons = []
+        self.hexagon_points = []
+        self.sun_hex_points = []
+        self.planets_hex_points = []
         self.hex_positions = {}
-        self.generate_hex_map(center_cords, radius)
+        self.sun_hex_positions = {}
+        self.planets_hex_positions = {}
+        self.hex_map = self.generate_hex_map(center_cords, radius)
+        self.save_map()
 
     def generate_hex_map(self, center_cords, radius):
+        hex_map = {}
+
+        # creating hex_map with value 0
         for map_q in range(-radius, radius + 1):
             for map_r in range(max(-radius, -map_q - radius), min(radius, -map_q + radius) + 1):
-                x = center_cords[0] + (map_q * X_OFFSET) + (map_r * X_OFFSET / 2)
-                y = center_cords[1] + (map_r * Y_OFFSET)
-                if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:  # изменить для камеры
-                    hex_points = get_hex_points(x, y, HEX_RADIUS)
-                    # if map_q == 1:
-                    #     self.q_hexagons.append(hex_points)
-                    # elif map_r == 0:
-                    #     self.r_hexagons.append(hex_points)
-                    self.hexagons.append(hex_points)
-                    self.hex_positions[(x, y)] = (map_q, map_r)
+                hex_map[(map_q, map_r)] = 0
+
+        # creating sun with value 1
+        sun_hexs = [(0, 0), (1, 0), (0, 1), (-1, 1), (-1, 0), (0, -1), (1, -1)]
+        for q, r in sun_hexs:
+            if (q, r) in hex_map:
+                hex_map[(q, r)] = 1
+
+        empty_hexes = [pos for pos, value in hex_map.items() if value == 0]  # empty_hexes for random hexes
+        # creating planets with value 2
+        for _ in range(random.randint(3, 6)):
+            if empty_hexes:
+                chosen_hex = random.choice(empty_hexes)
+                hex_map[chosen_hex] = 2
+                empty_hexes.remove(chosen_hex)
+
+        # creating self.hex_positions for get_clicked_hex
+        # creating self.hexagons, self.sun, self.planets for draw
+        for (map_q, map_r), value in hex_map.items():
+            x = center_cords[0] + (map_q * X_OFFSET) + (map_r * X_OFFSET / 2)
+            y = center_cords[1] + (map_r * Y_OFFSET)
+            if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
+                hex_points = get_hex_points(x, y, HEX_RADIUS)
+                if value == 1:
+                    self.sun_hex_points.append(hex_points)
+                    self.sun_hex_positions[(x, y)] = (map_q, map_r)
+                elif value == 2:
+                    self.planets_hex_points.append(hex_points)
+                    self.planets_hex_positions[(x, y)] = (map_q, map_r)
+                self.hexagon_points.append(hex_points)
+                self.hex_positions[(x, y)] = (map_q, map_r)
+
+        return hex_map
+
+    def save_map(self):
+        file_path = os.path.join(SAVE_DIR, "map.json")
+        with open(file_path, "w") as file:
+            json.dump([{"q": key[0], "r": key[1], "value": value} for key, value in self.hex_map.items()], file, indent=4)
 
     def draw(self, screen):
-        for hex_points in self.hexagons:
+        for hex_points in self.hexagon_points:
             pygame.draw.polygon(screen, WHITE, hex_points, 1)
-        # for q_hex_points in self.q_hexagons:
-        #     pygame.draw.polygon(screen, MALINA, q_hex_points)
-        # for r_hex_points in self.r_hexagons:
-        #     pygame.draw.polygon(screen, GREEN, r_hex_points)
+        if self.sun_hex_points:
+            self.draw_hex_image(screen, 'sun', 2.5)
+        if self.planets_hex_points:
+            self.draw_hex_image(screen, 'planet', 1)
+
+    def draw_hex_image(self, screen, image, size):
+        scaled_image = pygame.transform.scale(hex_images[image],
+                                              (int(HEX_WIDTH) * size - INDENT * size,
+                                               int(HEX_WIDTH) * size - INDENT * size))
+        if size == 2.5:
+            screen.blit(scaled_image, scaled_image.get_rect(center=CENTER_CORDS))
+        if size == 1:
+            if image == 'planet':
+                for (x, y), _ in self.planets_hex_positions.items():
+                    screen.blit(scaled_image, scaled_image.get_rect(center=(x, y)))
 
     def get_clicked_hex(self, pos):
         mouse_x, mouse_y = pos
-        for (hex_x, hex_y), (map_q, map_r) in self.hex_positions.items():
-            distance = math.sqrt((mouse_x - hex_x) ** 2 + (mouse_y - hex_y) ** 2)
-            if distance < HEX_RADIUS:
-                print(f"q={map_q}, r={map_r}")
-                return map_q, map_r
-        return None
+        nearest_hex_cords = min(self.hex_positions, key=lambda p: (mouse_x - p[0]) ** 2 + (mouse_y - p[1]) ** 2)
+        map_q, map_r = self.hex_positions[nearest_hex_cords]
+        print(f"q={map_q}, r={map_r}")
+        return map_q, map_r
 
 
 def game():
@@ -109,6 +163,11 @@ def game():
         hex_map.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def terminate():
+    pygame.quit()
+    sys.exit()
 
 
 def main():

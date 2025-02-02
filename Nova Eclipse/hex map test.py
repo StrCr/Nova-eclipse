@@ -102,7 +102,7 @@ class HexCanvas:
     def draw(self):
         """Рисует карту и элементы интерфейса."""
         self.canvas.fill(BLACK)  # Очистка экрана
-        for hexagon, x, y in self.hexmap.hexagons():
+        for hexagon, x, y in self.hexmap.hexagons_points():
             vertexes = hexagon.vertexes_of(x, y)
             color = ORANGE if self.hexmap.is_clicked_on(x, y) else YELLOW
             pygame.draw.polygon(self.canvas, color, vertexes)  # Рисуем шестиугольник
