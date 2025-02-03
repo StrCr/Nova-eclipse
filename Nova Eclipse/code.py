@@ -1,3 +1,4 @@
+
 import pygame
 import math
 import sys
@@ -21,7 +22,7 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GRAY = (200, 200, 200)
 
-# Visual settings # переместить константы внутрь кода
+# Visual settings
 HEX_RADIUS = 35
 HEX_WIDTH = math.sqrt(3) * HEX_RADIUS
 HEX_HEIGHT = 2 * HEX_RADIUS
@@ -186,6 +187,9 @@ class HexMap:
 
     def get_clicked_hex(self, pos):
         mouse_x, mouse_y = pos
+        # Проверка на клик за пределами карты
+        if not (0 <= mouse_x <= WIDTH and 0 <= mouse_y <= HEIGHT):
+            return
         nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
 
         # Exit menu
@@ -270,12 +274,13 @@ class HexMap:
             if self.selected_spaceship == one_hex:
                 pygame.draw.polygon(screen, RED, hex_points, 3)
 
-            # Draw planets # перенести в draw
+            # Draw planets
             if one_hex["value"] == 2:
                 planet_type = one_hex.get('planet_type')
                 planet_image_key = planet_types[planet_type]['image']
                 scaled_planet_image = pygame.transform.scale(hex_images[planet_image_key],
-                                                             (int(HEX_WIDTH) - INDENT, int(HEX_WIDTH) - INDENT))
+                                                              (int(HEX_WIDTH) - INDENT,
+                                                               int(HEX_WIDTH) - INDENT))
                 screen.blit(scaled_planet_image, scaled_planet_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
         # Draw possible movement
@@ -288,22 +293,9 @@ class HexMap:
         self.draw_hex_image(screen, 'sun', 2.5)
         self.draw_hex_image(screen, 'spaceship', 1)
 
-
         # Draw planet menu
         if self.planet_menu_active and self.selected_planet:
             self.draw_planet_menu(screen)
-
-    def draw_hex_image(self, screen, image, size):
-        scaled_image = pygame.transform.scale(hex_images[image],
-                                              (int(HEX_WIDTH) * size - INDENT * size,
-                                               int(HEX_WIDTH) * size - INDENT * size))
-
-        if image == 'sun':
-            screen.blit(scaled_image, scaled_image.get_rect(center=CENTER_CORDS))
-        elif image == 'spaceship':
-            for one_hex in self.hex_map:
-                if one_hex["value"] == 3:
-                    screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
     def draw_planet_menu(self, screen):
         # Draw menu background
@@ -311,7 +303,7 @@ class HexMap:
         menu_y = HEIGHT // 2 - MENU_HEIGHT // 2
         pygame.draw.rect(screen, BLACK, (menu_x, menu_y, MENU_WIDTH, MENU_HEIGHT))
         pygame.draw.rect(screen, WHITE, (
-        menu_x - MENU_OUTLINE, menu_y - MENU_OUTLINE, MENU_WIDTH + MENU_OUTLINE * 2, MENU_HEIGHT + MENU_OUTLINE * 2),
+            menu_x - MENU_OUTLINE, menu_y - MENU_OUTLINE, MENU_WIDTH + MENU_OUTLINE * 2, MENU_HEIGHT + MENU_OUTLINE * 2),
                          MENU_OUTLINE)
 
         # Draw planet image area
@@ -377,9 +369,6 @@ class HexMap:
         screen.blit(event_1, (events_area_x, events_y))
         events_y += self.font.get_height() + MENU_PADDING
 
-        event_2 = self.font.render("Нет событий", True, WHITE)
-        screen.blit(event_2, (events_area_x, events_y))
-
         # Draw exit button
         button_x = menu_x + MENU_WIDTH - EXIT_BUTTON_SIZE - MENU_PADDING
         button_y = menu_y + MENU_PADDING
@@ -391,6 +380,18 @@ class HexMap:
         exit_text = self.font.render('X', True, WHITE)
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE)
+
+    def draw_hex_image(self, screen, image, size):
+        scaled_image = pygame.transform.scale(hex_images[image],
+                                              (int(HEX_WIDTH) * size - INDENT * size,
+                                               int(HEX_WIDTH) * size - INDENT * size))
+
+        if image == 'sun':
+            screen.blit(scaled_image, scaled_image.get_rect(center=CENTER_CORDS))
+        elif image == 'spaceship':
+            for one_hex in self.hex_map:
+                if  one_hex["value"] == 3:
+                   screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
 
 def game():

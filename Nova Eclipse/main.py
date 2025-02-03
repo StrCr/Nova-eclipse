@@ -63,11 +63,49 @@ def load_image(name, colorkey=None):
 
 hex_images = {
     'sun': load_image('Sun_Red.png'),
-    'planet': load_image('planet_Cloudy.png'),
+    'tropical': load_image('Planet_Tropical.png'),
+    'snowy': load_image('Planet_Snowy.png'),
+    'ocean': load_image('Planet_Ocean.png'),
+    'lunar': load_image('Planet_Lunar.png'),
+    'muddy': load_image('Planet_Muddy.png'),
+    'cloudy': load_image('planet_Cloudy.png'),
     'spaceship': load_image('spaceship.png'),
     'population': load_image('icon_population.png'),
     'production': load_image('icon_gear.png'),
     'power': load_image('icon_power.png')
+}
+
+planet_types = {
+    'tropical': {
+        'population_growth_rate': 1.2,
+        'production_bonus': 1.1,
+        'image': 'tropical'
+    },
+    'snowy': {
+        'population_growth_rate': 0.8,
+        'production_bonus': 1.2,
+        'image': 'snowy'
+    },
+    'ocean': {
+        'population_growth_rate': 1.0,
+        'production_bonus': 1.0,
+        'image': 'ocean'
+    },
+    'lunar': {
+        'population_growth_rate': 0.5,
+        'production_bonus': 1.3,
+        'image': 'lunar'
+    },
+    'muddy': {
+        'population_growth_rate': 0.9,
+        'production_bonus': 0.8,
+        'image': 'muddy'
+    },
+    'cloudy': {
+        'population_growth_rate': 1.1,
+        'production_bonus': 0.9,
+        'image': 'cloudy'
+    }
 }
 
 
@@ -108,19 +146,23 @@ def generate_hex_map(center_cords, radius):
     empty_hex = [one_hex for one_hex in hex_map if one_hex["value"] == 0]
 
     # creating planets with value 2
-    for _ in range(random.randint(3, 6)):
+    planet_types_list = list(planet_types.keys())
+    random.shuffle(planet_types_list)
+    num_planets = random.randint(5, 6)
+    for i in range(num_planets):
         if empty_hex:
             chosen_hex = random.choice(empty_hex)
             chosen_hex["value"] = 2
-            chosen_hex["population"] = random.randint(50, 150)
-            chosen_hex["production"] = random.randint(50, 150)
+            chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
+            chosen_hex["population"] = random.randint(100, 1000)
+            chosen_hex["production"] = random.randint(100, 1000)
             empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 3
     if empty_hex:
         chosen_hex = random.choice(empty_hex)
         chosen_hex["value"] = 3
-        chosen_hex["power"] = random.randint(10, 100)
+        chosen_hex["power"] = random.randint(75, 100)
         empty_hex.remove(chosen_hex)
 
     return hex_map
@@ -228,6 +270,14 @@ class HexMap:
             if self.selected_spaceship == one_hex:
                 pygame.draw.polygon(screen, RED, hex_points, 3)
 
+            # Draw planets # перенести в draw
+            if one_hex["value"] == 2:
+                planet_type = one_hex.get('planet_type')
+                planet_image_key = planet_types[planet_type]['image']
+                scaled_planet_image = pygame.transform.scale(hex_images[planet_image_key],
+                                                             (int(HEX_WIDTH) - INDENT, int(HEX_WIDTH) - INDENT))
+                screen.blit(scaled_planet_image, scaled_planet_image.get_rect(center=(one_hex["x"], one_hex["y"])))
+
         # Draw possible movement
         if self.selected_spaceship:
             for one_hex in self.movement_hex:
@@ -236,13 +286,24 @@ class HexMap:
 
         # Draw objects
         self.draw_hex_image(screen, 'sun', 2.5)
-        self.draw_hex_image(screen, 'planet', 1)
         self.draw_hex_image(screen, 'spaceship', 1)
 
 
         # Draw planet menu
         if self.planet_menu_active and self.selected_planet:
             self.draw_planet_menu(screen)
+
+    def draw_hex_image(self, screen, image, size):
+        scaled_image = pygame.transform.scale(hex_images[image],
+                                              (int(HEX_WIDTH) * size - INDENT * size,
+                                               int(HEX_WIDTH) * size - INDENT * size))
+
+        if image == 'sun':
+            screen.blit(scaled_image, scaled_image.get_rect(center=CENTER_CORDS))
+        elif image == 'spaceship':
+            for one_hex in self.hex_map:
+                if one_hex["value"] == 3:
+                    screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
     def draw_planet_menu(self, screen):
         # Draw menu background
@@ -259,8 +320,10 @@ class HexMap:
         pygame.draw.rect(screen, WHITE, (planet_area_x, planet_area_y, PLANET_IMAGE_SIZE, PLANET_IMAGE_SIZE), 2)
 
         # Draw planet image
-        planet_image = pygame.transform.scale(hex_images['planet'], (
-        PLANET_IMAGE_SIZE - 2 * MENU_PADDING, PLANET_IMAGE_SIZE - 2 * MENU_PADDING))
+        planet_type = self.selected_planet.get('planet_type')
+        planet_image_key = planet_types[planet_type]['image']
+        planet_image = pygame.transform.scale(hex_images[planet_image_key], (
+            PLANET_IMAGE_SIZE - 2 * MENU_PADDING, PLANET_IMAGE_SIZE - 2 * MENU_PADDING))
         screen.blit(planet_image, (planet_area_x + MENU_PADDING, planet_area_y + MENU_PADDING))
 
         stats_x = planet_area_x + PLANET_IMAGE_SIZE + MENU_PADDING
@@ -278,6 +341,7 @@ class HexMap:
         screen.blit(prod_icon, (stats_x, stats_y))
         prod_text = self.font.render(f": {self.selected_planet.get('production')}", True, WHITE)
         screen.blit(prod_text, (stats_x + MENU_ICON_SIZE, stats_y + (MENU_ICON_SIZE // 4)))
+        stats_y += MENU_ICON_SIZE + MENU_PADDING
 
         # Draw separation lines
         pygame.draw.line(screen, WHITE, (planet_area_x, planet_area_y + PLANET_IMAGE_SIZE + MENU_PADDING),
@@ -294,11 +358,11 @@ class HexMap:
         screen.blit(decision_title, (decisions_area_x, decisions_area_y))
         decisions_y = decisions_area_y + self.font.get_height() + MENU_PADDING
 
-        decision_1 = self.font.render("Решение 1", True, WHITE)
+        decision_1 = self.font.render("Увеличить население", True, WHITE)
         screen.blit(decision_1, (decisions_area_x, decisions_y))
         decisions_y += self.font.get_height() + MENU_PADDING
 
-        decision_2 = self.font.render("Решение 2", True, WHITE)
+        decision_2 = self.font.render("Улучшить производство", True, WHITE)
         screen.blit(decision_2, (decisions_area_x, decisions_y))
 
         # Draw events area
@@ -309,11 +373,11 @@ class HexMap:
         screen.blit(events_title, (events_area_x, events_area_y))
         events_y = events_area_y + self.font.get_height() + MENU_PADDING
 
-        event_1 = self.font.render("Событие 1", True, WHITE)
+        event_1 = self.font.render("Нет событий", True, WHITE)
         screen.blit(event_1, (events_area_x, events_y))
         events_y += self.font.get_height() + MENU_PADDING
 
-        event_2 = self.font.render("Событие 2", True, WHITE)
+        event_2 = self.font.render("Нет событий", True, WHITE)
         screen.blit(event_2, (events_area_x, events_y))
 
         # Draw exit button
@@ -327,20 +391,6 @@ class HexMap:
         exit_text = self.font.render('X', True, WHITE)
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE)
-
-    def draw_hex_image(self, screen, image, size):
-        scaled_image = pygame.transform.scale(hex_images[image],
-                                              (int(HEX_WIDTH) * size - INDENT * size,
-                                               int(HEX_WIDTH) * size - INDENT * size))
-
-        if image == 'sun':
-            screen.blit(scaled_image, scaled_image.get_rect(center=CENTER_CORDS))
-        else:
-            for one_hex in self.hex_map:
-                if one_hex["value"] == 2 and image == 'planet':
-                    screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
-                elif one_hex["value"] == 3 and image == 'spaceship':
-                    screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
 
 def game():
