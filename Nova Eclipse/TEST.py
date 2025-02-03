@@ -29,6 +29,8 @@ Y_OFFSET = HEX_HEIGHT * 3 / 4
 CENTER_CORDS = (WIDTH // 2, HEIGHT // 2)
 MAP_RADIUS = 6
 INDENT = 10
+INFO_BAR_HEIGHT = 30
+ICON_SIZE = 20
 
 # Saves
 SAVE_DIR = "saves"
@@ -52,7 +54,10 @@ def load_image(name, colorkey=None):
 hex_images = {
     'sun': load_image('Sun_Red.png'),
     'planet': load_image('planet_Cloudy.png'),
-    'spaceship': load_image('spaceship.png')
+    'spaceship': load_image('spaceship.png'),
+    'population': load_image('icon_population.png'),
+    'production': load_image('icon_gear.png'),
+    'power': load_image('icon_power.png')
 }
 
 
@@ -100,12 +105,15 @@ def generate_hex_map(center_cords, radius):
         if empty_hex:
             chosen_hex = random.choice(empty_hex)
             chosen_hex["value"] = 2
+            chosen_hex["population"] = random.randint(50, 150)
+            chosen_hex["production"] = random.randint(50, 150)
             empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 3
     if empty_hex:
         chosen_hex = random.choice(empty_hex)
         chosen_hex["value"] = 3
+        chosen_hex["power"] = random.randint(10, 100)
         empty_hex.remove(chosen_hex)
 
     return hex_map
@@ -116,6 +124,7 @@ class HexMap:
         self.hex_map = generate_hex_map(center_cords, radius)
         self.selected_spaceship = None
         self.movement_hex = []
+        self.font = pygame.font.Font(None, 30)
         self.save_map()
 
     def save_map(self):
@@ -146,17 +155,49 @@ class HexMap:
         self.movement_hex = [h for h in self.hex_map if hex_distance(start_hex, h) == 1 and h["value"] == 0]
 
     def draw(self, screen):
+        # Draw info bar
+        pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, INFO_BAR_HEIGHT))
+        total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map)
+        total_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
+        total_power = sum(one_hex.get("power", 0) for one_hex in self.hex_map)
+
+        info_bar_x_offset = 5
+        info_bar_y_offset = 5
+
+        # Draw Population
+        population_icon = pygame.transform.scale(hex_images['population'], (ICON_SIZE, ICON_SIZE))
+        screen.blit(population_icon, (info_bar_x_offset, info_bar_y_offset))
+        population_text = self.font.render(f": {total_population}", True, WHITE)
+        screen.blit(population_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
+        info_bar_x_offset += ICON_SIZE + population_text.get_width() + 10
+
+        # Draw Production
+        production_icon = pygame.transform.scale(hex_images['production'], (ICON_SIZE, ICON_SIZE))
+        screen.blit(production_icon, (info_bar_x_offset, info_bar_y_offset))
+        production_text = self.font.render(f": {total_production}", True, WHITE)
+        screen.blit(production_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
+        info_bar_x_offset += ICON_SIZE + production_text.get_width() + 10
+
+        # Draw Power
+        power_icon = pygame.transform.scale(hex_images['power'], (ICON_SIZE, ICON_SIZE))
+        screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
+        power_text = self.font.render(f": {total_power}", True, WHITE)
+        screen.blit(power_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
+
+        # Draw barrier
         for one_hex in self.hex_map:
             hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
             pygame.draw.polygon(screen, WHITE, hex_points, 1)
             if self.selected_spaceship == one_hex:
                 pygame.draw.polygon(screen, RED, hex_points, 3)
 
+        # Draw possible movement
         if self.selected_spaceship:
             for one_hex in self.movement_hex:
                 hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
                 pygame.draw.polygon(screen, BLUE, hex_points, 3)
 
+        # Draw objects
         self.draw_hex_image(screen, 'sun', 2.5)
         self.draw_hex_image(screen, 'planet', 1)
         self.draw_hex_image(screen, 'spaceship', 1)
