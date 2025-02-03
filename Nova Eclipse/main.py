@@ -16,8 +16,9 @@ clock = pygame.time.Clock()
 # Colour
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-YELLOW = (255, 255, 0)
 GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
 
 # Hex settings # переместить константы внутрь кода
 HEX_RADIUS = 35
@@ -68,6 +69,13 @@ def get_hex_points(center_x, center_y, radius):
     return points
 
 
+def hex_distance(hex1, hex2):
+    """Вычисляет расстояние между двумя шестиугольниками (q, r)"""
+    return (abs(hex1["q"] - hex2["q"])
+            + abs(hex1["q"] + hex1["r"] - hex2["q"] - hex2["r"])
+            + abs(hex1["r"] - hex2["r"])) // 2
+
+
 def generate_hex_map(center_cords, radius):
     hex_map = []
 
@@ -105,8 +113,9 @@ def generate_hex_map(center_cords, radius):
 
 class HexMap:
     def __init__(self, center_cords, radius):
-        self.hex_positions = {}
         self.hex_map = generate_hex_map(center_cords, radius)
+        self.selected_spaceship = None
+        self.movement_hex = []
         self.save_map()
 
     def save_map(self):
@@ -114,10 +123,39 @@ class HexMap:
         with open(file_path, "w") as file:
             json.dump(self.hex_map, file, indent=4)
 
+    def get_clicked_hex(self, pos):
+        mouse_x, mouse_y = pos
+        nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
+        # if the spaceship was selected
+        if self.selected_spaceship and nearest_hex in self.movement_hex:
+            nearest_hex["value"] = 3
+            self.selected_spaceship["value"] = 0
+            self.selected_spaceship = None
+            self.movement_hex = []
+            return
+
+        # spaceship select
+        if nearest_hex["value"] == 3:
+            self.selected_spaceship = nearest_hex
+            self.movement_area(nearest_hex)
+        else:
+            self.selected_spaceship = None
+            self.movement_hex = []
+
+    def movement_area(self, start_hex):
+        self.movement_hex = [h for h in self.hex_map if hex_distance(start_hex, h) == 1 and h["value"] == 0]
+
     def draw(self, screen):
         for one_hex in self.hex_map:
             hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
             pygame.draw.polygon(screen, WHITE, hex_points, 1)
+            if self.selected_spaceship == one_hex:
+                pygame.draw.polygon(screen, RED, hex_points, 3)
+
+        if self.selected_spaceship:
+            for one_hex in self.movement_hex:
+                hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
+                pygame.draw.polygon(screen, BLUE, hex_points, 3)
 
         self.draw_hex_image(screen, 'sun', 2.5)
         self.draw_hex_image(screen, 'planet', 1)
@@ -136,19 +174,6 @@ class HexMap:
                     screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
                 elif one_hex["value"] == 3 and image == 'spaceship':
                     screen.blit(scaled_image, scaled_image.get_rect(center=(one_hex["x"], one_hex["y"])))
-
-    def get_clicked_hex(self, pos):
-        mouse_x, mouse_y = pos
-
-        nearest_hex = min(self.hex_map,
-                          key=lambda one_hex: (mouse_x - one_hex["x"]) ** 2 + (mouse_y - one_hex["y"]) ** 2)
-
-        hex_points = get_hex_points(nearest_hex["x"], nearest_hex["y"], HEX_RADIUS)
-        if pygame.draw.polygon(screen, WHITE, hex_points, 1).collidepoint(mouse_x, mouse_y):
-            print(f"q={nearest_hex['q']}, r={nearest_hex['r']}")
-            return nearest_hex["q"], nearest_hex["r"]
-
-        return None
 
 
 def game():
