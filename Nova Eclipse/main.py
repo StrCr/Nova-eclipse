@@ -19,6 +19,7 @@ BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GRAY = (200, 200, 200)
 
 # Hex settings # переместить константы внутрь кода
 HEX_RADIUS = 35
@@ -31,6 +32,11 @@ MAP_RADIUS = 6
 INDENT = 10
 INFO_BAR_HEIGHT = 30
 ICON_SIZE = 20
+MENU_WIDTH = WIDTH // 2
+MENU_HEIGHT = HEIGHT // 2
+EXIT_BUTTON_SIZE = 30
+EXIT_BTN_OUTLINE = 2
+MENU_OUTLINE = 4
 
 # Saves
 SAVE_DIR = "saves"
@@ -124,7 +130,10 @@ class HexMap:
         self.hex_map = generate_hex_map(center_cords, radius)
         self.selected_spaceship = None
         self.movement_hex = []
+        self.selected_planet = None
         self.font = pygame.font.Font(None, 30)
+        self.planet_menu_active = False
+        self.exit_button_rect = None
         self.save_map()
 
     def save_map(self):
@@ -135,6 +144,14 @@ class HexMap:
     def get_clicked_hex(self, pos):
         mouse_x, mouse_y = pos
         nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
+
+        # Exit menu
+        if self.planet_menu_active:
+            if self.exit_button_rect.collidepoint(pos):
+                self.planet_menu_active = False
+                self.selected_planet = None
+            return
+
         # if the spaceship was selected
         if self.selected_spaceship and nearest_hex in self.movement_hex:
             nearest_hex["value"] = 3
@@ -147,9 +164,24 @@ class HexMap:
         if nearest_hex["value"] == 3:
             self.selected_spaceship = nearest_hex
             self.movement_area(nearest_hex)
+            self.selected_planet = None
+        # planet select
+        elif nearest_hex["value"] == 2:
+            if self.can_select_planet(nearest_hex):
+                self.selected_planet = nearest_hex
+                self.planet_menu_active = True
+                self.selected_spaceship = None
+                self.movement_hex = []
         else:
             self.selected_spaceship = None
             self.movement_hex = []
+            self.selected_planet = None
+
+    def can_select_planet(self, planet_hex):
+        for other_hex in self.hex_map:
+            if other_hex["value"] == 3 and hex_distance(planet_hex, other_hex) == 1:
+                return True
+        return False
 
     def movement_area(self, start_hex):
         self.movement_hex = [h for h in self.hex_map if hex_distance(start_hex, h) == 1 and h["value"] == 0]
@@ -184,10 +216,14 @@ class HexMap:
         power_text = self.font.render(f": {total_power}", True, WHITE)
         screen.blit(power_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
 
-        # Draw barrier
         for one_hex in self.hex_map:
             hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
-            pygame.draw.polygon(screen, WHITE, hex_points, 1)
+            # Draw planet hex
+            if self.selected_planet == one_hex:
+                pygame.draw.polygon(screen, GREEN, hex_points, 3)
+            else:
+                pygame.draw.polygon(screen, WHITE, hex_points, 1)
+            # Draw barrier
             if self.selected_spaceship == one_hex:
                 pygame.draw.polygon(screen, RED, hex_points, 3)
 
@@ -201,6 +237,39 @@ class HexMap:
         self.draw_hex_image(screen, 'sun', 2.5)
         self.draw_hex_image(screen, 'planet', 1)
         self.draw_hex_image(screen, 'spaceship', 1)
+
+
+        # Draw planet menu
+        if self.planet_menu_active and self.selected_planet:
+            self.draw_planet_menu(screen)
+
+    def draw_planet_menu(self, screen):
+        # Draw menu background
+        menu_x = WIDTH // 2 - MENU_WIDTH // 2
+        menu_y = HEIGHT // 2 - MENU_HEIGHT // 2
+        pygame.draw.rect(screen, BLACK, (menu_x, menu_y, MENU_WIDTH, MENU_HEIGHT))
+        pygame.draw.rect(screen, WHITE, (menu_x - MENU_OUTLINE, menu_y - MENU_OUTLINE,
+                                         MENU_WIDTH + MENU_OUTLINE * 2, MENU_HEIGHT + MENU_OUTLINE * 2), MENU_OUTLINE)
+
+        # Draw planet info
+        text_y = menu_y + 20
+        population_text = self.font.render(f"Population: {self.selected_planet.get('population')}", True, WHITE)
+        screen.blit(population_text, (menu_x + 20, text_y))
+        text_y += 40
+
+        production_text = self.font.render(f"Production: {self.selected_planet.get('production')}", True, WHITE)
+        screen.blit(production_text, (menu_x + 20, text_y))
+
+        # Draw exit button
+        button_x = menu_x + MENU_WIDTH - EXIT_BUTTON_SIZE - 10
+        button_y = menu_y + 10
+        pygame.draw.rect(screen, RED, (button_x, button_y, EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE))
+        pygame.draw.rect(screen, WHITE, (button_x - EXIT_BTN_OUTLINE, button_y - EXIT_BTN_OUTLINE,
+                         EXIT_BUTTON_SIZE + EXIT_BTN_OUTLINE * 2, EXIT_BUTTON_SIZE + EXIT_BTN_OUTLINE * 2),
+                         EXIT_BTN_OUTLINE)
+        exit_text = self.font.render('X', True, WHITE)
+        screen.blit(exit_text, (button_x + 9, button_y + 7))
+        self.exit_button_rect = pygame.Rect(button_x, button_y, EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE)
 
     def draw_hex_image(self, screen, image, size):
         scaled_image = pygame.transform.scale(hex_images[image],
