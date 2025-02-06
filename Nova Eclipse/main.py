@@ -524,7 +524,40 @@ class HexMap:
         screen.blit(return_text, return_text_rect)
 
 
+def start_screen():
+    """Функция для отображения начального экрана"""
+    title_font = pygame.font.Font(None, 72)
+    button_font = pygame.font.Font(None, 36)
+
+    title_text = title_font.render("Nova Eclipse", True, settings.colors['white'])
+    title_rect = title_text.get_rect(center=(settings.width // 2, settings.height // 3))
+
+    start_button_text = button_font.render("Начать", True, settings.colors['black'])
+    start_button_rect = start_button_text.get_rect(center=(settings.width // 2, settings.height // 2))
+    start_button_cords = pygame.Rect(start_button_rect.left - 10, start_button_rect.top - 5,
+                                 start_button_rect.width + 20, start_button_rect.height + 10)
+
+    background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
+    while True:
+        settings.screen.blit(background, (0, 0))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if start_button_cords.collidepoint(event.pos):
+                    return
+
+        settings.screen.blit(title_text, title_rect)
+
+        pygame.draw.rect(settings.screen, settings.colors['white'], start_button_cords)
+        settings.screen.blit(start_button_text, start_button_rect)
+
+        pygame.display.flip()
+        settings.clock.tick(settings.fps)
+
+
 def game():
+    """Основная часть игры"""
     hex_map = HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
     background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
 
@@ -547,6 +580,7 @@ def terminate():
 
 
 def main():
+    start_screen()
     game()
 
 
