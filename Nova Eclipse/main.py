@@ -1,3 +1,4 @@
+
 import pygame
 import math
 import sys
@@ -5,47 +6,59 @@ import os
 import json
 import random
 
-# Game settings
-pygame.init()
-WIDTH, HEIGHT = 1000, 750
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Nova Eclipse")
-FPS = 60
-clock = pygame.time.Clock()
 
-# Colour
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-GRAY = (200, 200, 200)
+class GameSettings:
+    """
+    Класс для хранения основных настроек игры и инициализации Pygame.
+    """
 
-# Visual settings # переместить константы внутрь кода
-HEX_RADIUS = 35
-HEX_WIDTH = math.sqrt(3) * HEX_RADIUS
-HEX_HEIGHT = 2 * HEX_RADIUS
-X_OFFSET = HEX_WIDTH
-Y_OFFSET = HEX_HEIGHT * 3 / 4
-CENTER_CORDS = (WIDTH // 2, HEIGHT // 2)
-MAP_RADIUS = 6
-INDENT = 10
-INFO_BAR_HEIGHT = 30
-ICON_SIZE = 20
-MENU_WIDTH = WIDTH // 2
-MENU_HEIGHT = HEIGHT // 2
-EXIT_BUTTON_SIZE = 30
-EXIT_BTN_OUTLINE = 2
-MENU_OUTLINE = 4
-PLANET_IMAGE_SIZE = 100
-MENU_ICON_SIZE = 40
-MENU_LINE_WIDTH = 2
-MENU_PADDING = 10
+    def __init__(self):
+        self.width = 1000
+        self.height = 750
+        self.fps = 60
+        self.caption = "Nova Eclipse"
 
-# Saves
-SAVE_DIR = "saves"
-os.makedirs(SAVE_DIR, exist_ok=True)
+        # Цвета
+        self.white = (255, 255, 255)
+        self.black = (0, 0, 0)
+        self.green = (0, 255, 0)
+        self.red = (255, 0, 0)
+        self.blue = (0, 0, 255)
+        self.gray = (200, 200, 200)
 
+        # Визуальные настройки
+        self.hex_radius = 35
+        self.hex_width = math.sqrt(3) * self.hex_radius
+        self.hex_height = 2 * self.hex_radius
+        self.x_offset = self.hex_width
+        self.y_offset = self.hex_height * 3 / 4
+        self.map_radius = 6
+        self.indent = 10
+        self.info_bar_height = 30
+        self.icon_size = 20
+        self.menu_width = self.width // 2
+        self.menu_height = self.height // 2
+        self.exit_button_size = 30
+        self.exit_btn_outline = 2
+        self.menu_outline = 4
+        self.planet_image_size = 100
+        self.menu_icon_size = 40
+        self.menu_line_width = 2
+        self.menu_padding = 10
+
+        # Пути
+        self.save_dir = "saves"
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # Инициализация Pygame
+        pygame.init()
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption(self.caption)
+        self.clock = pygame.time.Clock()
+
+
+# Создаем экземпляр класса настроек
+settings = GameSettings()
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -63,11 +76,6 @@ def load_image(name, colorkey=None):
 
 hex_images = {
     'sun': load_image('Sun_Red.png'),
-    'tropical': load_image('Planet_Tropical.png'),
-    'snowy': load_image('Planet_Snowy.png'),
-    'ocean': load_image('Planet_Ocean.png'),
-    'lunar': load_image('Planet_Lunar.png'),
-    'muddy': load_image('Planet_Muddy.png'),
     'cloudy': load_image('planet_Cloudy.png'),
     'spaceship': load_image('spaceship.png'),
     'population': load_image('icon_population.png'),
@@ -77,35 +85,29 @@ hex_images = {
 
 planet_types = {
     'tropical': {
-        'population_growth_rate': 1.2,
-        'production_bonus': 1.1,
-        'image': 'tropical'
-    },
-    'snowy': {
-        'population_growth_rate': 0.8,
-        'production_bonus': 1.2,
-        'image': 'snowy'
-    },
+        'population_growth_rate': 8,
+        'production_bonus': 3,
+        'image': load_image('Planet_Tropical.png')},
     'ocean': {
-        'population_growth_rate': 1.0,
-        'production_bonus': 1.0,
-        'image': 'ocean'
-    },
-    'lunar': {
-        'population_growth_rate': 0.5,
-        'production_bonus': 1.3,
-        'image': 'lunar'
-    },
-    'muddy': {
-        'population_growth_rate': 0.9,
-        'production_bonus': 0.8,
-        'image': 'muddy'
-    },
+        'population_growth_rate': 7,
+        'production_bonus': 4,
+        'image': load_image('Planet_Ocean.png')},
     'cloudy': {
-        'population_growth_rate': 1.1,
-        'production_bonus': 0.9,
-        'image': 'cloudy'
-    }
+        'population_growth_rate': 6,
+        'production_bonus': 5,
+        'image': load_image('planet_Cloudy.png')},
+    'snowy': {
+        'population_growth_rate': 5,
+        'production_bonus': 6,
+        'image': load_image('Planet_Snowy.png')},
+    'muddy': {
+        'population_growth_rate': 4,
+        'production_bonus': 7,
+        'image': load_image('Planet_Muddy.png')},
+    'lunar': {
+        'population_growth_rate': 3,
+        'production_bonus': 8,
+        'image': load_image('Planet_Lunar.png')}
 }
 
 
@@ -132,9 +134,9 @@ def generate_hex_map(center_cords, radius):
     # creating hex_map with value 0
     for map_q in range(-radius, radius + 1):
         for map_r in range(max(-radius, -map_q - radius), min(radius, -map_q + radius) + 1):
-            x = center_cords[0] + (map_q * X_OFFSET) + (map_r * X_OFFSET / 2)
-            y = center_cords[1] + (map_r * Y_OFFSET)
-            if 0 <= x <= WIDTH and 0 <= y <= HEIGHT:
+            x = center_cords[0] + (map_q * settings.x_offset) + (map_r * settings.x_offset / 2)
+            y = center_cords[1] + (map_r * settings.y_offset)
+            if 0 <= x <= settings.width and 0 <= y <= settings.height:
                 hex_map.append({"q": map_q, "r": map_r, "value": 0, "x": x, "y": y})
 
     # creating sun with value 1
@@ -180,7 +182,7 @@ class HexMap:
         self.save_map()
 
     def save_map(self):
-        file_path = os.path.join(SAVE_DIR, "map.json")
+        file_path = os.path.join(settings.save_dir, "map.json")
         with open(file_path, "w") as file:
             json.dump(self.hex_map, file, indent=4)
 
@@ -231,7 +233,7 @@ class HexMap:
 
     def draw(self, screen):
         # Draw info bar
-        pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, INFO_BAR_HEIGHT))
+        pygame.draw.rect(screen, settings.black, (0, 0, settings.width, settings.info_bar_height))
         total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map)
         total_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
         total_power = sum(one_hex.get("power", 0) for one_hex in self.hex_map)
@@ -240,54 +242,53 @@ class HexMap:
         info_bar_y_offset = 5
 
         # Draw Population
-        population_icon = pygame.transform.scale(hex_images['population'], (ICON_SIZE, ICON_SIZE))
+        population_icon = pygame.transform.scale(hex_images['population'], (settings.icon_size, settings.icon_size))
         screen.blit(population_icon, (info_bar_x_offset, info_bar_y_offset))
-        population_text = self.font.render(f": {total_population}", True, WHITE)
-        screen.blit(population_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
-        info_bar_x_offset += ICON_SIZE + population_text.get_width() + 10
+        population_text = self.font.render(f": {total_population}", True, settings.white)
+        screen.blit(population_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
+        info_bar_x_offset += settings.icon_size + population_text.get_width() + 10
 
         # Draw Production
-        production_icon = pygame.transform.scale(hex_images['production'], (ICON_SIZE, ICON_SIZE))
+        production_icon = pygame.transform.scale(hex_images['production'], (settings.icon_size, settings.icon_size))
         screen.blit(production_icon, (info_bar_x_offset, info_bar_y_offset))
-        production_text = self.font.render(f": {total_production}", True, WHITE)
-        screen.blit(production_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
-        info_bar_x_offset += ICON_SIZE + production_text.get_width() + 10
+        production_text = self.font.render(f": {total_production}", True, settings.white)
+        screen.blit(production_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
+        info_bar_x_offset += settings.icon_size + production_text.get_width() + 10
 
         # Draw Power
-        power_icon = pygame.transform.scale(hex_images['power'], (ICON_SIZE, ICON_SIZE))
+        power_icon = pygame.transform.scale(hex_images['power'], (settings.icon_size, settings.icon_size))
         screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
-        power_text = self.font.render(f": {total_power}", True, WHITE)
-        screen.blit(power_text, (info_bar_x_offset + ICON_SIZE, info_bar_y_offset))
+        power_text = self.font.render(f": {total_power}", True, settings.white)
+        screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
 
         for one_hex in self.hex_map:
-            hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
+            hex_points = get_hex_points(one_hex["x"], one_hex["y"], settings.hex_radius)
             # Draw planet hex
             if self.selected_planet == one_hex:
-                pygame.draw.polygon(screen, GREEN, hex_points, 3)
+                pygame.draw.polygon(screen, settings.green, hex_points, 3)
             else:
-                pygame.draw.polygon(screen, WHITE, hex_points, 1)
+                pygame.draw.polygon(screen, settings.white, hex_points, 1)
             # Draw barrier
             if self.selected_spaceship == one_hex:
-                pygame.draw.polygon(screen, RED, hex_points, 3)
+                pygame.draw.polygon(screen, settings.red, hex_points, 3)
 
             # Draw planets # перенести в draw
             if one_hex["value"] == 2:
                 planet_type = one_hex.get('planet_type')
-                planet_image_key = planet_types[planet_type]['image']
-                scaled_planet_image = pygame.transform.scale(hex_images[planet_image_key],
-                                                             (int(HEX_WIDTH) - INDENT, int(HEX_WIDTH) - INDENT))
+                scaled_planet_image = pygame.transform.scale(planet_types[planet_type]['image'],
+                                                             (int(settings.hex_width) - settings.indent,
+                                                              int(settings.hex_width) - settings.indent))
                 screen.blit(scaled_planet_image, scaled_planet_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
         # Draw possible movement
         if self.selected_spaceship:
             for one_hex in self.movement_hex:
-                hex_points = get_hex_points(one_hex["x"], one_hex["y"], HEX_RADIUS)
-                pygame.draw.polygon(screen, BLUE, hex_points, 3)
+                hex_points = get_hex_points(one_hex["x"], one_hex["y"], settings.hex_radius)
+                pygame.draw.polygon(screen, settings.blue, hex_points, 3)
 
         # Draw objects
         self.draw_hex_image(screen, 'sun', 2.5)
         self.draw_hex_image(screen, 'spaceship', 1)
-
 
         # Draw planet menu
         if self.planet_menu_active and self.selected_planet:
@@ -295,11 +296,11 @@ class HexMap:
 
     def draw_hex_image(self, screen, image, size):
         scaled_image = pygame.transform.scale(hex_images[image],
-                                              (int(HEX_WIDTH) * size - INDENT * size,
-                                               int(HEX_WIDTH) * size - INDENT * size))
+                                              (int(settings.hex_width) * size - settings.indent * size,
+                                               int(settings.hex_width) * size - settings.indent * size))
 
         if image == 'sun':
-            screen.blit(scaled_image, scaled_image.get_rect(center=CENTER_CORDS))
+            screen.blit(scaled_image, scaled_image.get_rect(center=(settings.width // 2, settings.height // 2)))
         elif image == 'spaceship':
             for one_hex in self.hex_map:
                 if one_hex["value"] == 3:
@@ -307,105 +308,79 @@ class HexMap:
 
     def draw_planet_menu(self, screen):
         # Draw menu background
-        menu_x = WIDTH // 2 - MENU_WIDTH // 2
-        menu_y = HEIGHT // 2 - MENU_HEIGHT // 2
-        pygame.draw.rect(screen, BLACK, (menu_x, menu_y, MENU_WIDTH, MENU_HEIGHT))
-        pygame.draw.rect(screen, WHITE, (
-        menu_x - MENU_OUTLINE, menu_y - MENU_OUTLINE, MENU_WIDTH + MENU_OUTLINE * 2, MENU_HEIGHT + MENU_OUTLINE * 2),
-                         MENU_OUTLINE)
+        menu_x = settings.width // 2 - settings.menu_width // 2
+        menu_y = settings.height // 2 - settings.menu_height // 2
+        pygame.draw.rect(screen, settings.black, (menu_x, menu_y, settings.menu_width, settings.menu_height))
+        pygame.draw.rect(screen, settings.white, (
+            menu_x - settings.menu_outline, menu_y - settings.menu_outline,
+            settings.menu_width + settings.menu_outline * 2, settings.menu_height + settings.menu_outline * 2),
+                         settings.menu_outline)
 
         # Draw planet image area
-        planet_area_x = menu_x + MENU_PADDING
-        planet_area_y = menu_y + MENU_PADDING
-        pygame.draw.rect(screen, WHITE, (planet_area_x, planet_area_y, PLANET_IMAGE_SIZE, PLANET_IMAGE_SIZE), 2)
+        planet_area_x = menu_x + settings.menu_padding
+        planet_area_y = menu_y + settings.menu_padding
+        pygame.draw.rect(screen, settings.white,
+                         (planet_area_x, planet_area_y, settings.planet_image_size, settings.planet_image_size), 2)
 
         # Draw planet image
         planet_type = self.selected_planet.get('planet_type')
-        planet_image_key = planet_types[planet_type]['image']
-        planet_image = pygame.transform.scale(hex_images[planet_image_key], (
-            PLANET_IMAGE_SIZE - 2 * MENU_PADDING, PLANET_IMAGE_SIZE - 2 * MENU_PADDING))
-        screen.blit(planet_image, (planet_area_x + MENU_PADDING, planet_area_y + MENU_PADDING))
+        planet_image = pygame.transform.scale(planet_types[planet_type]['image'], (
+            settings.planet_image_size - 2 * settings.menu_padding,
+            settings.planet_image_size - 2 * settings.menu_padding))
+        screen.blit(planet_image, (planet_area_x + settings.menu_padding, planet_area_y + settings.menu_padding))
 
-        stats_x = planet_area_x + PLANET_IMAGE_SIZE + MENU_PADDING
+        stats_x = planet_area_x + settings.planet_image_size + settings.menu_padding
         stats_y = planet_area_y
 
         # Population
-        pop_icon = pygame.transform.scale(hex_images['population'], (MENU_ICON_SIZE, MENU_ICON_SIZE))
+        pop_icon = pygame.transform.scale(hex_images['population'], (settings.menu_icon_size, settings.menu_icon_size))
         screen.blit(pop_icon, (stats_x, stats_y))
-        pop_text = self.font.render(f": {self.selected_planet.get('population')}", True, WHITE)
-        screen.blit(pop_text, (stats_x + MENU_ICON_SIZE, stats_y + (MENU_ICON_SIZE // 4)))
-        stats_y += MENU_ICON_SIZE + MENU_PADDING
+        pop_text = self.font.render(f": {self.selected_planet.get('population')}", True, settings.white)
+        screen.blit(pop_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
+        stats_y += settings.menu_icon_size + settings.menu_padding
 
         # Production
-        prod_icon = pygame.transform.scale(hex_images['production'], (MENU_ICON_SIZE, MENU_ICON_SIZE))
+        prod_icon = pygame.transform.scale(hex_images['production'], (settings.menu_icon_size, settings.menu_icon_size))
         screen.blit(prod_icon, (stats_x, stats_y))
-        prod_text = self.font.render(f": {self.selected_planet.get('production')}", True, WHITE)
-        screen.blit(prod_text, (stats_x + MENU_ICON_SIZE, stats_y + (MENU_ICON_SIZE // 4)))
-        stats_y += MENU_ICON_SIZE + MENU_PADDING
+        prod_text = self.font.render(f": {self.selected_planet.get('production')}", True, settings.white)
+        screen.blit(prod_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
+        stats_y += settings.menu_icon_size + settings.menu_padding
 
         # Draw separation lines
-        pygame.draw.line(screen, WHITE, (planet_area_x, planet_area_y + PLANET_IMAGE_SIZE + MENU_PADDING),
-                         (menu_x + MENU_WIDTH - MENU_PADDING, planet_area_y + PLANET_IMAGE_SIZE + MENU_PADDING),
-                         MENU_LINE_WIDTH)
-        pygame.draw.line(screen, WHITE, (menu_x + MENU_WIDTH // 2, planet_area_y + PLANET_IMAGE_SIZE + MENU_PADDING),
-                         (menu_x + MENU_WIDTH // 2, menu_y + MENU_HEIGHT - MENU_PADDING), MENU_LINE_WIDTH)
-
-        # Draw decisions area
-        decisions_area_x = menu_x + MENU_PADDING
-        decisions_area_y = planet_area_y + PLANET_IMAGE_SIZE + 2 * MENU_PADDING
-
-        decision_title = self.font.render("Решения:", True, WHITE)
-        screen.blit(decision_title, (decisions_area_x, decisions_area_y))
-        decisions_y = decisions_area_y + self.font.get_height() + MENU_PADDING
-
-        decision_1 = self.font.render("Увеличить население", True, WHITE)
-        screen.blit(decision_1, (decisions_area_x, decisions_y))
-        decisions_y += self.font.get_height() + MENU_PADDING
-
-        decision_2 = self.font.render("Улучшить производство", True, WHITE)
-        screen.blit(decision_2, (decisions_area_x, decisions_y))
-
-        # Draw events area
-        events_area_x = menu_x + MENU_WIDTH // 2 + MENU_PADDING
-        events_area_y = planet_area_y + PLANET_IMAGE_SIZE + 2 * MENU_PADDING
-
-        events_title = self.font.render("События:", True, WHITE)
-        screen.blit(events_title, (events_area_x, events_area_y))
-        events_y = events_area_y + self.font.get_height() + MENU_PADDING
-
-        event_1 = self.font.render("Нет событий", True, WHITE)
-        screen.blit(event_1, (events_area_x, events_y))
-        events_y += self.font.get_height() + MENU_PADDING
-
-        event_2 = self.font.render("Нет событий", True, WHITE)
-        screen.blit(event_2, (events_area_x, events_y))
+        pygame.draw.line(screen, settings.white,
+                         (planet_area_x, planet_area_y + settings.planet_image_size + settings.menu_padding),
+                         (menu_x + settings.menu_width - settings.menu_padding,
+                          planet_area_y + settings.planet_image_size + settings.menu_padding),
+                         settings.menu_line_width)
 
         # Draw exit button
-        button_x = menu_x + MENU_WIDTH - EXIT_BUTTON_SIZE - MENU_PADDING
-        button_y = menu_y + MENU_PADDING
-        pygame.draw.rect(screen, RED, (button_x, button_y, EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE))
-        pygame.draw.rect(screen, WHITE, (button_x - EXIT_BTN_OUTLINE, button_y - EXIT_BTN_OUTLINE,
-                                         EXIT_BUTTON_SIZE + EXIT_BTN_OUTLINE * 2,
-                                         EXIT_BUTTON_SIZE + EXIT_BTN_OUTLINE * 2),
-                         EXIT_BTN_OUTLINE)
-        exit_text = self.font.render('X', True, WHITE)
+        button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
+        button_y = menu_y + settings.menu_padding
+        pygame.draw.rect(screen, settings.red,
+                         (button_x, button_y, settings.exit_button_size, settings.exit_button_size))
+        pygame.draw.rect(screen, settings.white,
+                         (button_x - settings.exit_btn_outline, button_y - settings.exit_btn_outline,
+                          settings.exit_button_size + settings.exit_btn_outline * 2,
+                          settings.exit_button_size + settings.exit_btn_outline * 2),
+                         settings.exit_btn_outline)
+        exit_text = self.font.render('X', True, settings.white)
         screen.blit(exit_text, (button_x + 9, button_y + 7))
-        self.exit_button_rect = pygame.Rect(button_x, button_y, EXIT_BUTTON_SIZE, EXIT_BUTTON_SIZE)
+        self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
 
 
 def game():
-    hex_map = HexMap(CENTER_CORDS, MAP_RADIUS)
-    background = pygame.transform.scale(load_image("cosmos.jpg"), (WIDTH, HEIGHT))
+    hex_map = HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
+    background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
     while True:
-        screen.blit(background, (0, 0))
+        settings.screen.blit(background, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 hex_map.get_clicked_hex(event.pos)
-        hex_map.draw(screen)
+        hex_map.draw(settings.screen)
         pygame.display.flip()
-        clock.tick(FPS)
+        settings.clock.tick(settings.fps)
 
 
 def terminate():
