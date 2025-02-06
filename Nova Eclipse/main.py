@@ -40,34 +40,34 @@ hex_images = {
 
 planet_types = {
     'tropical': {
-        'population_growth_rate': 1.2,
-        'production_bonus': 1.1,
+        'population_growth_rate': 8,
+        'production_bonus': 3,
         'image': 'tropical'
     },
-    'snowy': {
-        'population_growth_rate': 0.8,
-        'production_bonus': 1.2,
-        'image': 'snowy'
-    },
     'ocean': {
-        'population_growth_rate': 1.0,
-        'production_bonus': 1.0,
+        'population_growth_rate': 7,
+        'production_bonus': 4,
         'image': 'ocean'
     },
-    'lunar': {
-        'population_growth_rate': 0.5,
-        'production_bonus': 1.3,
-        'image': 'lunar'
+    'cloudy': {
+        'population_growth_rate': 6,
+        'production_bonus': 5,
+        'image': 'cloudy'
+    },
+    'snowy': {
+        'population_growth_rate': 5,
+        'production_bonus': 6,
+        'image': 'snowy'
     },
     'muddy': {
-        'population_growth_rate': 0.9,
-        'production_bonus': 0.8,
+        'population_growth_rate': 4,
+        'production_bonus': 7,
         'image': 'muddy'
     },
-    'cloudy': {
-        'population_growth_rate': 1.1,
-        'production_bonus': 0.9,
-        'image': 'cloudy'
+    'lunar': {
+        'population_growth_rate': 3,
+        'production_bonus': 8,
+        'image': 'lunar'
     }
 }
 
@@ -171,15 +171,15 @@ def generate_hex_map(center_cords, radius):
             chosen_hex = random.choice(empty_hex)
             chosen_hex["value"] = 2
             chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
-            chosen_hex["population"] = random.randint(100, 1000)
-            chosen_hex["production"] = random.randint(100, 1000)
+            chosen_hex["population"] = random.randint(5, 15)
+            chosen_hex["production"] = random.randint(5, 15)
             empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 3
     if empty_hex:
         chosen_hex = random.choice(empty_hex)
         chosen_hex["value"] = 3
-        chosen_hex["power"] = random.randint(75, 100)
+        chosen_hex["power"] = 50
         empty_hex.remove(chosen_hex)
 
     return hex_map
@@ -204,12 +204,6 @@ class TurnManager:
         screen.blit(
             pygame.transform.scale(hex_images['next_turn'], (settings.turn_button_size, settings.turn_button_size)),
             self.turn_button_rect.topleft)
-
-    def draw_turn_counter(self, screen, font):
-        """Отрисовывает счетчик ходов"""
-        turn_text = font.render(f"{self.turn_count}/{self.max_turns}", True, settings.colors['white'])
-        text_rect = turn_text.get_rect(topright=(settings.width - 10, settings.info_bar_height + 10))
-        screen.blit(turn_text, text_rect)
 
     def handle_input(self, event, hex_map):
         """Обрабатывает нажатие кнопки смены хода"""
@@ -377,7 +371,11 @@ class HexMap:
         power_text = self.font.render(f" {total_power}", True, settings.colors['white'])
         screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
 
-        turn.draw_turn_counter(screen, self.font)
+        # Draw turn counter
+        turn_text = self.font.render(f"{turn.turn_count}/{turn.max_turns}", True,
+                                     settings.colors['white'])
+        text_rect = turn_text.get_rect(topright=(settings.width - 10, settings.info_bar_height - 23))
+        screen.blit(turn_text, text_rect)
 
     def draw_hex(self, screen, one_hex):
         hex_points = get_hex_points(one_hex["x"], one_hex["y"], settings.hex_radius)
@@ -472,15 +470,15 @@ class HexMap:
         line_y = separator_y + settings.menu_padding
         plus_icon = pygame.transform.scale(hex_images['plus'], (settings.menu_icon_size, settings.menu_icon_size))
         screen.blit(plus_icon, (planet_area_x, line_y))
-        plus_text = self.font.render("Debuff", True, settings.colors['white'])
-        screen.blit(plus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
+        minus_text = self.font.render("Debuff", True, settings.colors['white'])
+        screen.blit(minus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
                                 line_y + (settings.menu_icon_size // 4)))
 
         line_y += settings.menu_icon_size + settings.menu_padding // 2
         minus_icon = pygame.transform.scale(hex_images['minus'], (settings.menu_icon_size, settings.menu_icon_size))
         screen.blit(minus_icon, (planet_area_x, line_y))
-        minus_text = self.font.render("Buff", True, settings.colors['white'])
-        screen.blit(minus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
+        plus_text = self.font.render("Buff", True, settings.colors['white'])
+        screen.blit(plus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
                                  line_y + (settings.menu_icon_size // 4)))
 
         # Draw separation lines
