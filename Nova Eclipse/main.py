@@ -7,10 +7,7 @@ import random
 
 
 class GameSettings:
-    """
-    Класс для хранения основных настроек игры и инициализации Pygame.
-    """
-
+    """Класс для хранения основных настроек игры и инициализации Pygame"""
     def __init__(self):
         self.width = 1000
         self.height = 750
@@ -46,6 +43,8 @@ class GameSettings:
         self.menu_icon_size = 40
         self.menu_line_width = 2
         self.menu_padding = 10
+        self.button_width = 150
+        self.button_height = 40
 
         # Пути
         self.save_dir = "saves"
@@ -78,16 +77,18 @@ def load_image(name, colorkey=None):
 
 hex_images = {
     'sun': load_image('Sun_Red.png'),
+    'spaceship': load_image('spaceship.png'),
+    'population': load_image('icon_population.png'),
+    'production': load_image('icon_gear.png'),
+    'power': load_image('icon_power.png'),
+    'plus': load_image('icon_plus.png'),
+    'minus': load_image('icon_minus.png'),
     'tropical': load_image('Planet_Tropical.png'),
     'snowy': load_image('Planet_Snowy.png'),
     'ocean': load_image('Planet_Ocean.png'),
     'lunar': load_image('Planet_Lunar.png'),
     'muddy': load_image('Planet_Muddy.png'),
-    'cloudy': load_image('planet_Cloudy.png'),
-    'spaceship': load_image('spaceship.png'),
-    'population': load_image('icon_population.png'),
-    'production': load_image('icon_gear.png'),
-    'power': load_image('icon_power.png')
+    'cloudy': load_image('planet_Cloudy.png')
 }
 
 planet_types = {
@@ -187,9 +188,19 @@ class HexMap:
         self.movement_hex = []
         self.selected_planet = None
         self.font = pygame.font.Font(None, 30)
-        self.planet_menu_active = False
-        self.exit_button_rect = None
         self.save_map()
+
+        # status
+        self.planet_menu_active = False
+        self.bonus_menu_active = False
+        self.event_menu_active = False
+
+        # rects
+        self.exit_button_rect = None  # Exit from planet menu
+        self.bonus_button_rect = None # Enter the bonus menu
+        self.event_button_rect = None # Enter the event menu
+        self.return_button_rect = None  # Return from bonus/event
+        self.menu_exit_button_rect = None  # Exit from bonus/event to game
 
     def save_map(self):
         file_path = os.path.join(settings.save_dir, "map.json")
@@ -200,14 +211,36 @@ class HexMap:
         mouse_x, mouse_y = pos
         nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
 
-        # Exit menu
-        if self.planet_menu_active:
-            if self.exit_button_rect.collidepoint(pos):
+        # Exit/return buttons
+        if self.bonus_menu_active or self.event_menu_active:
+            if self.menu_exit_button_rect and self.menu_exit_button_rect.collidepoint(pos):
+                self.bonus_menu_active = False
+                self.event_menu_active = False
                 self.planet_menu_active = False
                 self.selected_planet = None
+                return
+            elif self.return_button_rect and self.return_button_rect.collidepoint(pos):
+                self.bonus_menu_active = False
+                self.event_menu_active = False
+                self.planet_menu_active = True
+                return
+            else:
+                return
+
+        # Planet menu buttons
+        if self.planet_menu_active:
+            if self.exit_button_rect and self.exit_button_rect.collidepoint(pos):
+                self.planet_menu_active = False
+                self.selected_planet = None
+            elif self.bonus_button_rect and self.bonus_button_rect.collidepoint(pos):
+                self.planet_menu_active = False
+                self.bonus_menu_active = True
+            elif self.event_button_rect and self.event_button_rect.collidepoint(pos):
+                self.planet_menu_active = False
+                self.event_menu_active = True
             return
 
-        # Логика выбора гекса
+        # Selected hexagon
         if self.selected_spaceship and nearest_hex in self.movement_hex:
             self.move_spaceship(nearest_hex)
         elif nearest_hex["value"] == 3:
@@ -266,6 +299,10 @@ class HexMap:
         # Draw planet menu
         if self.planet_menu_active and self.selected_planet:
             self.draw_planet_menu(screen)
+        elif self.bonus_menu_active:
+            self.draw_bonus_menu(screen)
+        elif self.event_menu_active:
+            self.draw_event_menu(screen)
 
     def draw_info_bar(self, screen):
         pygame.draw.rect(screen, settings.colors['black'], (0, 0, settings.width, settings.info_bar_height))
@@ -315,7 +352,7 @@ class HexMap:
             planet_type = one_hex.get('planet_type')
             planet_image_key = planet_types[planet_type]['image']
             scaled_planet_image = pygame.transform.scale(hex_images[planet_image_key], (
-            int(settings.hex_width) - settings.indent, int(settings.hex_width) - settings.indent))
+                int(settings.hex_width) - settings.indent, int(settings.hex_width) - settings.indent))
             screen.blit(scaled_planet_image, scaled_planet_image.get_rect(center=(one_hex["x"], one_hex["y"])))
 
     def draw_movement_area(self, screen):
@@ -350,7 +387,8 @@ class HexMap:
         # Draw planet image area
         planet_area_x = menu_x + settings.menu_padding
         planet_area_y = menu_y + settings.menu_padding
-        pygame.draw.rect(screen, settings.colors['white'], (planet_area_x, planet_area_y, settings.planet_image_size, settings.planet_image_size), 2)
+        pygame.draw.rect(screen, settings.colors['white'],
+                         (planet_area_x, planet_area_y, settings.planet_image_size, settings.planet_image_size), 2)
 
         # Draw planet image
         planet_type = self.selected_planet.get('planet_type')
@@ -378,11 +416,53 @@ class HexMap:
         stats_y += settings.menu_icon_size + settings.menu_padding
 
         # Draw separation lines
+        separator_y = planet_area_y + settings.planet_image_size + settings.menu_padding
         pygame.draw.line(screen, settings.colors['white'],
-                         (planet_area_x, planet_area_y + settings.planet_image_size + settings.menu_padding),
-                         (menu_x + settings.menu_width - settings.menu_padding,
-                          planet_area_y + settings.planet_image_size + settings.menu_padding),
+                         (planet_area_x, separator_y),
+                         (menu_x + settings.menu_width - settings.menu_padding, separator_y),
                          settings.menu_line_width)
+
+        # Add bonus lines
+        line_y = separator_y + settings.menu_padding
+        plus_icon = pygame.transform.scale(hex_images['plus'], (settings.menu_icon_size, settings.menu_icon_size))
+        screen.blit(plus_icon, (planet_area_x, line_y))
+        plus_text = self.font.render("Debuff", True, settings.colors['white'])
+        screen.blit(plus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
+                                line_y + (settings.menu_icon_size // 4)))
+
+        line_y += settings.menu_icon_size + settings.menu_padding // 2
+        minus_icon = pygame.transform.scale(hex_images['minus'], (settings.menu_icon_size, settings.menu_icon_size))
+        screen.blit(minus_icon, (planet_area_x, line_y))
+        minus_text = self.font.render("Buff", True, settings.colors['white'])
+        screen.blit(minus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
+                                 line_y + (settings.menu_icon_size // 4)))
+
+        # Draw separation lines
+        separator_y = line_y + settings.menu_icon_size + settings.menu_padding
+        pygame.draw.line(screen, settings.colors['white'],
+                         (planet_area_x, separator_y),
+                         (menu_x + settings.menu_width - settings.menu_padding, separator_y),
+                         settings.menu_line_width)
+
+        # Draw buttons
+        button_y = separator_y + settings.menu_padding
+        bonus_button_x = menu_x + settings.menu_padding
+        event_button_x = menu_x + settings.menu_width - settings.button_width - settings.menu_padding
+
+        self.bonus_button_rect = pygame.Rect(bonus_button_x, button_y, settings.button_width, settings.button_height)
+        self.event_button_rect = pygame.Rect(event_button_x, button_y, settings.button_width, settings.button_height)
+
+        pygame.draw.rect(screen, settings.colors['white'], self.bonus_button_rect)
+        pygame.draw.rect(screen, settings.colors['white'], self.event_button_rect)
+
+        bonus_text = self.font.render("Бонусы", True, settings.colors['black'])
+        event_text = self.font.render("События", True, settings.colors['black'])
+
+        bonus_text_rect = bonus_text.get_rect(center=self.bonus_button_rect.center)
+        event_text_rect = event_text.get_rect(center=self.event_button_rect.center)
+
+        screen.blit(bonus_text, bonus_text_rect)
+        screen.blit(event_text, event_text_rect)
 
         # Draw exit button
         button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
@@ -397,6 +477,51 @@ class HexMap:
         exit_text = self.font.render('X', True, settings.colors['white'])
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
+
+    def draw_bonus_menu(self, screen):
+        self.draw_extra_menu(screen, "Список бонусов")
+
+    def draw_event_menu(self, screen):
+        self.draw_extra_menu(screen, "Список событий")
+
+    def draw_extra_menu(self, screen, title):
+        # Draw menu background
+        menu_x = settings.width // 2 - settings.menu_width // 2
+        menu_y = settings.height // 2 - settings.menu_height // 2
+        pygame.draw.rect(screen, settings.colors['black'], (menu_x, menu_y, settings.menu_width, settings.menu_height))
+        pygame.draw.rect(screen, settings.colors['white'], (
+            menu_x - settings.menu_outline, menu_y - settings.menu_outline,
+            settings.menu_width + settings.menu_outline * 2, settings.menu_height + settings.menu_outline * 2),
+                         settings.menu_outline)
+
+        # Draw title
+        title_text = self.font.render(title, True, settings.colors['white'])
+        title_rect = title_text.get_rect(center=(settings.width // 2, menu_y + 30))
+        screen.blit(title_text, title_rect)
+
+        # Draw exit button
+        button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
+        button_y = menu_y + settings.menu_padding
+        pygame.draw.rect(screen, settings.colors['red'],
+                         (button_x, button_y, settings.exit_button_size, settings.exit_button_size))
+        pygame.draw.rect(screen, settings.colors['white'],
+                         (button_x - settings.exit_btn_outline, button_y - settings.exit_btn_outline,
+                          settings.exit_button_size + settings.exit_btn_outline * 2,
+                          settings.exit_button_size + settings.exit_btn_outline * 2),
+                         settings.exit_btn_outline)
+        exit_text = self.font.render('X', True, settings.colors['white'])
+        screen.blit(exit_text, (button_x + 9, button_y + 7))
+        self.menu_exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size,
+                                                  settings.exit_button_size)
+
+        # Draw return button
+        button_x = menu_x + settings.menu_width // 2 - settings.button_width // 2
+        button_y = menu_y + settings.menu_height - settings.button_height - settings.menu_padding
+        self.return_button_rect = pygame.Rect(button_x, button_y, settings.button_width, settings.button_height)
+        pygame.draw.rect(screen, settings.colors['blue'], self.return_button_rect)
+        return_text = self.font.render('Return', True, settings.colors['white'])
+        return_text_rect = return_text.get_rect(center=self.return_button_rect.center)
+        screen.blit(return_text, return_text_rect)
 
 
 def game():
