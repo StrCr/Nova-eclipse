@@ -6,61 +6,6 @@ import json
 import random
 
 
-class GameSettings:
-    """Класс для хранения основных настроек игры и инициализации Pygame"""
-    def __init__(self):
-        self.width = 1000
-        self.height = 750
-        self.fps = 60
-        self.caption = "Nova Eclipse"
-
-        # Цвета (создаем словарь для удобства)
-        self.colors = {
-            'white': (255, 255, 255),
-            'black': (0, 0, 0),
-            'green': (0, 255, 0),
-            'red': (255, 0, 0),
-            'blue': (0, 0, 255),
-            'gray': (200, 200, 200)
-        }
-
-        # Визуальные настройки
-        self.hex_radius = 35
-        self.hex_width = math.sqrt(3) * self.hex_radius
-        self.hex_height = 2 * self.hex_radius
-        self.x_offset = self.hex_width
-        self.y_offset = self.hex_height * 3 / 4
-        self.map_radius = 6
-        self.indent = 10
-        self.info_bar_height = 30
-        self.icon_size = 20
-        self.menu_width = self.width // 2
-        self.menu_height = self.height // 2
-        self.exit_button_size = 30
-        self.exit_btn_outline = 2
-        self.menu_outline = 4
-        self.planet_image_size = 100
-        self.menu_icon_size = 40
-        self.menu_line_width = 2
-        self.menu_padding = 10
-        self.button_width = 150
-        self.button_height = 40
-
-        # Пути
-        self.save_dir = "saves"
-        os.makedirs(self.save_dir, exist_ok=True)
-
-        # Инициализация Pygame
-        pygame.init()
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption(self.caption)
-        self.clock = pygame.time.Clock()
-
-
-# Создаем экземпляр класса настроек
-settings = GameSettings()
-
-
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -83,12 +28,14 @@ hex_images = {
     'power': load_image('icon_power.png'),
     'plus': load_image('icon_plus.png'),
     'minus': load_image('icon_minus.png'),
+    'icon': load_image('icon_minus.png'),
     'tropical': load_image('Planet_Tropical.png'),
     'snowy': load_image('Planet_Snowy.png'),
     'ocean': load_image('Planet_Ocean.png'),
     'lunar': load_image('Planet_Lunar.png'),
     'muddy': load_image('Planet_Muddy.png'),
-    'cloudy': load_image('planet_Cloudy.png')
+    'cloudy': load_image('planet_Cloudy.png'),
+    'next_turn': load_image('icon_next_turn.png')
 }
 
 planet_types = {
@@ -123,6 +70,63 @@ planet_types = {
         'image': 'cloudy'
     }
 }
+
+
+class GameSettings:
+    """Класс для хранения основных настроек игры и инициализации Pygame"""
+
+    def __init__(self):
+        self.width = 1000
+        self.height = 750
+        self.fps = 60
+
+        # Цвета (создаем словарь для удобства)
+        self.colors = {
+            'white': (255, 255, 255),
+            'black': (0, 0, 0),
+            'green': (0, 255, 0),
+            'red': (255, 0, 0),
+            'blue': (0, 0, 255),
+            'gray': (200, 200, 200)
+        }
+
+        # Визуальные настройки
+        self.hex_radius = 35
+        self.hex_width = math.sqrt(3) * self.hex_radius
+        self.hex_height = 2 * self.hex_radius
+        self.x_offset = self.hex_width
+        self.y_offset = self.hex_height * 3 / 4
+        self.map_radius = 6
+        self.indent = 10
+        self.info_bar_height = 30
+        self.icon_size = 20
+        self.menu_width = self.width // 2
+        self.menu_height = self.height // 2
+        self.exit_button_size = 30
+        self.exit_btn_outline = 2
+        self.menu_outline = 4
+        self.planet_image_size = 100
+        self.menu_icon_size = 40
+        self.menu_line_width = 2
+        self.menu_padding = 10
+        self.button_width = 150
+        self.button_height = 40
+        self.turn_button_size = 90
+
+        # Пути
+        self.save_dir = "../../../../Downloads/saves"
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # Инициализация Pygame
+        pygame.init()
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("Nova Eclipse")
+        pygame.display.set_icon(hex_images['icon'])
+        self.clock = pygame.time.Clock()
+
+
+# Создаем экземпляр класса настроек
+settings = GameSettings()
 
 
 def get_hex_points(center_x, center_y, radius):
@@ -181,12 +185,48 @@ def generate_hex_map(center_cords, radius):
     return hex_map
 
 
+class TurnManager:
+    """Класс для управления ходами в игре"""
+
+    def __init__(self):
+        self.turn_count = 0
+        self.max_turns = 250
+        self.turn_button_rect = pygame.Rect(settings.width - settings.turn_button_size,
+                                            settings.height - settings.turn_button_size,
+                                            settings.turn_button_size, settings.turn_button_size)
+
+    def is_game_over(self):
+        """Проверяет, окончена ли игра"""
+        return self.turn_count >= self.max_turns
+
+    def draw_turn_button(self, screen):
+        """Отрисовывает кнопку смены хода"""
+        screen.blit(
+            pygame.transform.scale(hex_images['next_turn'], (settings.turn_button_size, settings.turn_button_size)),
+            self.turn_button_rect.topleft)
+
+    def draw_turn_counter(self, screen, font):
+        """Отрисовывает счетчик ходов"""
+        turn_text = font.render(f"{self.turn_count}/{self.max_turns}", True, settings.colors['white'])
+        text_rect = turn_text.get_rect(topright=(settings.width - 10, settings.info_bar_height + 10))
+        screen.blit(turn_text, text_rect)
+
+    def handle_input(self, event, hex_map):
+        """Обрабатывает нажатие кнопки смены хода"""
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.turn_button_rect.collidepoint(event.pos):
+                hex_map.deselect_all()
+                self.turn_count += 1
+                hex_map.spaceship_moved_this_turn = False
+
+
 class HexMap:
     def __init__(self, center_cords, radius):
         self.hex_map = generate_hex_map(center_cords, radius)
         self.selected_spaceship = None
         self.movement_hex = []
         self.selected_planet = None
+        self.spaceship_moved_this_turn = False
         self.font = pygame.font.Font(None, 30)
         self.save_map()
 
@@ -197,8 +237,8 @@ class HexMap:
 
         # rects
         self.exit_button_rect = None  # Exit from planet menu
-        self.bonus_button_rect = None # Enter the bonus menu
-        self.event_button_rect = None # Enter the event menu
+        self.bonus_button_rect = None  # Enter the bonus menu
+        self.event_button_rect = None  # Enter the event menu
         self.return_button_rect = None  # Return from bonus/event
         self.menu_exit_button_rect = None  # Exit from bonus/event to game
 
@@ -241,9 +281,9 @@ class HexMap:
             return
 
         # Selected hexagon
-        if self.selected_spaceship and nearest_hex in self.movement_hex:
+        if self.selected_spaceship and nearest_hex in self.movement_hex and not self.spaceship_moved_this_turn:
             self.move_spaceship(nearest_hex)
-        elif nearest_hex["value"] == 3:
+        elif nearest_hex["value"] == 3 and not self.spaceship_moved_this_turn:
             self.select_spaceship(nearest_hex)
         elif nearest_hex["value"] == 2 and self.can_select_planet(nearest_hex):
             self.select_planet(nearest_hex)
@@ -254,6 +294,7 @@ class HexMap:
         target_hex["value"] = 3
         self.selected_spaceship["value"] = 0
         self.deselect_all()
+        self.spaceship_moved_this_turn = True  # Корабль походил в этот ход
 
     def select_spaceship(self, hex):
         self.selected_spaceship = hex
@@ -270,6 +311,9 @@ class HexMap:
         self.selected_spaceship = None
         self.movement_hex = []
         self.selected_planet = None
+        self.planet_menu_active = False
+        self.bonus_menu_active = False
+        self.event_menu_active = False
 
     def can_select_planet(self, planet_hex):
         for other_hex in self.hex_map:
@@ -280,9 +324,9 @@ class HexMap:
     def movement_area(self, start_hex):
         self.movement_hex = [h for h in self.hex_map if hex_distance(start_hex, h) == 1 and h["value"] == 0]
 
-    def draw(self, screen):
+    def draw(self, screen, turn):
         # Draw info bar
-        self.draw_info_bar(screen)
+        self.draw_info_bar(screen, turn)
 
         # Draw hexes
         for one_hex in self.hex_map:
@@ -304,7 +348,7 @@ class HexMap:
         elif self.event_menu_active:
             self.draw_event_menu(screen)
 
-    def draw_info_bar(self, screen):
+    def draw_info_bar(self, screen, turn):
         pygame.draw.rect(screen, settings.colors['black'], (0, 0, settings.width, settings.info_bar_height))
         total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map)
         total_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
@@ -332,6 +376,8 @@ class HexMap:
         screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
         power_text = self.font.render(f" {total_power}", True, settings.colors['white'])
         screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
+
+        turn.draw_turn_counter(screen, self.font)
 
     def draw_hex(self, screen, one_hex):
         hex_points = get_hex_points(one_hex["x"], one_hex["y"], settings.hex_radius)
@@ -512,7 +558,7 @@ class HexMap:
         exit_text = self.font.render('X', True, settings.colors['white'])
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.menu_exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size,
-                                                  settings.exit_button_size)
+                                                 settings.exit_button_size)
 
         # Draw return button
         button_x = menu_x + settings.menu_width // 2 - settings.button_width // 2
@@ -535,7 +581,7 @@ def start_screen():
     start_button_text = button_font.render("Начать", True, settings.colors['black'])
     start_button_rect = start_button_text.get_rect(center=(settings.width // 2, settings.height // 2))
     start_button_cords = pygame.Rect(start_button_rect.left - 10, start_button_rect.top - 5,
-                                 start_button_rect.width + 20, start_button_rect.height + 10)
+                                     start_button_rect.width + 20, start_button_rect.height + 10)
 
     background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
     while True:
@@ -560,18 +606,24 @@ def game():
     """Основная часть игры"""
     hex_map = HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
     background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
+    turn_manager = TurnManager()
 
-    while True:
+    while not turn_manager.is_game_over():
         settings.screen.blit(background, (0, 0))
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 hex_map.get_clicked_hex(event.pos)
 
-        hex_map.draw(settings.screen)
+            turn_manager.handle_input(event, hex_map)
+
+        hex_map.draw(settings.screen, turn_manager)
+        turn_manager.draw_turn_button(settings.screen)
         pygame.display.flip()
         settings.clock.tick(settings.fps)
+    return
 
 
 def terminate():
@@ -582,6 +634,7 @@ def terminate():
 def main():
     start_screen()
     game()
+    print('s')
 
 
 if __name__ == "__main__":
