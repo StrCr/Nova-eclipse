@@ -20,6 +20,7 @@ def load_image(name, colorkey=None):
     return image
 
 
+# image load dictionary
 hex_images = {
     'sun': load_image('Sun_Red.png'),
     'spaceship': load_image('spaceship.png'),
@@ -38,6 +39,7 @@ hex_images = {
     'next_turn': load_image('icon_next_turn.png')
 }
 
+# planet types dictionary
 planet_types = {
     'tropical': {
         'population_growth_rate': 8,
@@ -73,15 +75,14 @@ planet_types = {
 
 
 class GameSettings:
-    """Класс для хранения основных настроек игры и инициализации Pygame"""
+    """Storing basic game settings and initializing Pygame"""
 
     def __init__(self):
         self.width = 1000
         self.height = 750
         self.fps = 60
-        self.move_count = 0
 
-        # Цвета (создаем словарь для удобства)
+        # Colors
         self.colors = {
             'white': (255, 255, 255),
             'black': (0, 0, 0),
@@ -91,7 +92,7 @@ class GameSettings:
             'gray': (200, 200, 200)
         }
 
-        # Визуальные настройки
+        # Visual settings
         self.hex_radius = 35
         self.hex_width = math.sqrt(3) * self.hex_radius
         self.hex_height = 2 * self.hex_radius
@@ -114,11 +115,11 @@ class GameSettings:
         self.button_height = 40
         self.turn_button_size = 90
 
-        # Пути
-        self.save_dir = "../../../../Downloads/saves"
+        # Saves
+        self.save_dir = "saves"
         os.makedirs(self.save_dir, exist_ok=True)
 
-        # Инициализация Pygame
+        # Pygame initialization
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Nova Eclipse")
@@ -126,7 +127,6 @@ class GameSettings:
         self.clock = pygame.time.Clock()
 
 
-# Создаем экземпляр класса настроек
 settings = GameSettings()
 
 
@@ -141,12 +141,13 @@ def get_hex_points(center_x, center_y, radius):
 
 
 def hex_distance(hex1, hex2):
-    """Вычисляет расстояние между двумя шестиугольниками (q, r)"""
+    """Calculates the distance between two hexagons with cords (q, r)"""
     return (abs(hex1["q"] - hex2["q"]) + abs(hex1["q"] + hex1["r"] - hex2["q"] - hex2["r"])
             + abs(hex1["r"] - hex2["r"])) // 2
 
 
 def generate_hex_map(center_cords, radius):
+    """Generating a map and assigning values to hexagons"""
     hex_map = []
 
     for map_q in range(-radius, radius + 1):
@@ -187,27 +188,27 @@ def generate_hex_map(center_cords, radius):
 
 
 class TurnManager:
-    """Класс для управления ходами в игре"""
+    """Control moves in the game"""
 
     def __init__(self):
         self.turn_count = 0
-        self.max_turns = 10
+        self.max_turns = 30
         self.turn_button_rect = pygame.Rect(settings.width - settings.turn_button_size,
                                             settings.height - settings.turn_button_size,
                                             settings.turn_button_size, settings.turn_button_size)
 
     def is_game_over(self):
-        """Проверяет, окончена ли игра"""
+        """Checks if the game is over"""
         return self.turn_count >= self.max_turns
 
     def draw_turn_button(self, screen):
-        """Отрисовывает кнопку смены хода"""
+        """Draws the change move button"""
         screen.blit(
             pygame.transform.scale(hex_images['next_turn'], (settings.turn_button_size, settings.turn_button_size)),
             self.turn_button_rect.topleft)
 
     def handle_input(self, event, hex_map):
-        """Обрабатывает нажатие кнопки смены хода"""
+        """handles the change of move"""
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.turn_button_rect.collidepoint(event.pos):
                 hex_map.deselect_all()
@@ -216,6 +217,8 @@ class TurnManager:
 
 
 class HexMap:
+    """Responsible for the map in the main game"""
+
     def __init__(self, center_cords, radius):
         self.hex_map = generate_hex_map(center_cords, radius)
         self.selected_spaceship = None
@@ -289,7 +292,6 @@ class HexMap:
         target_hex["value"] = 3
         self.selected_spaceship["value"] = 0
         self.deselect_all()
-        settings.move_count += 1
         self.spaceship_moved_this_turn = True  # Корабль походил в этот ход
 
     def select_spaceship(self, hex):
@@ -474,14 +476,14 @@ class HexMap:
         screen.blit(plus_icon, (planet_area_x, line_y))
         minus_text = self.font.render("Debuff", True, settings.colors['white'])
         screen.blit(minus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
-                                line_y + (settings.menu_icon_size // 4)))
+                                 line_y + (settings.menu_icon_size // 4)))
 
         line_y += settings.menu_icon_size + settings.menu_padding // 2
         minus_icon = pygame.transform.scale(hex_images['minus'], (settings.menu_icon_size, settings.menu_icon_size))
         screen.blit(minus_icon, (planet_area_x, line_y))
         plus_text = self.font.render("Buff", True, settings.colors['white'])
         screen.blit(plus_text, (planet_area_x + settings.menu_icon_size + settings.menu_padding // 2,
-                                 line_y + (settings.menu_icon_size // 4)))
+                                line_y + (settings.menu_icon_size // 4)))
 
         # Draw separation lines
         separator_y = line_y + settings.menu_icon_size + settings.menu_padding
@@ -571,7 +573,7 @@ class HexMap:
 
 
 def start_screen():
-    """Функция для отображения начального экрана"""
+    """Display start menu"""
     title_font = pygame.font.Font(None, 72)
     button_font = pygame.font.Font(None, 36)
 
@@ -603,7 +605,7 @@ def start_screen():
 
 
 def game():
-    """Основная часть игры"""
+    """Display main game"""
     hex_map = HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
     background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
     turn_manager = TurnManager()
@@ -625,27 +627,24 @@ def game():
         settings.clock.tick(settings.fps)
     return
 
+
 def end_screen():
-    move_count = settings.move_count
-    """Функция для отображения конечного экрана"""
+    """Display end menu"""
     title_font = pygame.font.Font(None, 72)
     text_font = pygame.font.Font(None, 36)
 
     title_text = title_font.render("Игра окончена!", True, settings.colors['white'])
     title_rect = title_text.get_rect(center=(settings.width // 2, settings.height // 3))
 
-    move_text = text_font.render(f"Корабль передвинулся: {move_count} раз", True, settings.colors['white'])
-    move_rect = move_text.get_rect(center=(settings.width // 2, settings.height // 2))
-
     restart_button_text = text_font.render("Играть заново", True, settings.colors['black'])
     restart_button_rect = restart_button_text.get_rect(center=(settings.width // 2, settings.height * 2 // 3))
     restart_button_cords = pygame.Rect(restart_button_rect.left - 10, restart_button_rect.top - 5,
-                                     restart_button_rect.width + 20, restart_button_rect.height + 10)
+                                       restart_button_rect.width + 20, restart_button_rect.height + 10)
 
     exit_button_text = text_font.render("Выход", True, settings.colors['black'])
     exit_button_rect = exit_button_text.get_rect(center=(settings.width // 2, settings.height * 5 // 6))
     exit_button_cords = pygame.Rect(exit_button_rect.left - 10, exit_button_rect.top - 5,
-                                        exit_button_rect.width + 20, exit_button_rect.height + 10)
+                                    exit_button_rect.width + 20, exit_button_rect.height + 10)
 
     background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
     while True:
@@ -655,13 +654,12 @@ def end_screen():
                 terminate()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if restart_button_cords.collidepoint(event.pos):
-                    game()  # перезапуск игры
+                    game()
                     return
                 elif exit_button_cords.collidepoint(event.pos):
                     terminate()
 
         settings.screen.blit(title_text, title_rect)
-        settings.screen.blit(move_text, move_rect)
 
         pygame.draw.rect(settings.screen, settings.colors['white'], restart_button_cords)
         settings.screen.blit(restart_button_text, restart_button_rect)
