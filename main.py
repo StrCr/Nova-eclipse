@@ -1,10 +1,13 @@
 import pygame
 import sys
 
-from turn_manager import turn_manager
-from settings import settings
-from utils import load_image
-from hex_map import HexMap
+from scripts import hexmap
+from scripts import turnManager
+from scripts.resourceManager import ResourceManager
+from scripts.settings import settings
+
+
+resource_manager = ResourceManager(settings.images_dir)
 
 
 def start_screen():
@@ -20,7 +23,7 @@ def start_screen():
     start_button_cords = pygame.Rect(start_button_rect.left - 10, start_button_rect.top - 5,
                                      start_button_rect.width + 20, start_button_rect.height + 10)
 
-    background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
+    background = pygame.transform.scale(resource_manager.load_image("cosmos.jpg"), (settings.width, settings.height))
     while True:
         settings.screen.blit(background, (0, 0))
         for event in pygame.event.get():
@@ -41,8 +44,9 @@ def start_screen():
 
 def game():
     """Display main game"""
-    hex_map = HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
-    background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
+    turn_manager = turnManager.TurnManager()
+    hex_map = hexmap.HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
+    background = pygame.transform.scale(resource_manager.load_image("cosmos.jpg"), (settings.width, settings.height))
 
     while not turn_manager.is_game_over():
         settings.screen.blit(background, (0, 0))
@@ -80,7 +84,7 @@ def end_screen():
     exit_button_cords = pygame.Rect(exit_button_rect.left - 10, exit_button_rect.top - 5,
                                     exit_button_rect.width + 20, exit_button_rect.height + 10)
 
-    background = pygame.transform.scale(load_image("cosmos.jpg"), (settings.width, settings.height))
+    background = pygame.transform.scale(resource_manager.load_image("cosmos.jpg"), (settings.width, settings.height))
     while True:
         settings.screen.blit(background, (0, 0))
         for event in pygame.event.get():

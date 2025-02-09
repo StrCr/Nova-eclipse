@@ -3,9 +3,9 @@ import os
 import json
 import random
 
-from settings import settings
-from utils import hex_distance, get_hex_points
-from constants import hex_images, planet_types
+from scripts.settings import settings
+from scripts.utils import hex_distance, get_hex_points
+from scripts.constants import hex_images, planet_types
 
 
 def generate_hex_map(center_cords, radius):

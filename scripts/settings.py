@@ -2,7 +2,7 @@ import math
 import os
 import pygame
 
-from constants import hex_images
+from scripts.resourceManager import ResourceManager
 
 
 class GameSettings:
@@ -45,15 +45,18 @@ class GameSettings:
         self.button_height = 40
         self.turn_button_size = 90
 
-        # Saves
-        self.save_dir = "../saves"
-        os.makedirs(self.save_dir, exist_ok=True)
+        # Ways to files
+        self.data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                     'data')
+        self.images_dir = os.path.join(self.data_dir, 'images')
+        self.save_dir = os.path.join(self.data_dir, 'saves')
 
         # Pygame initialization
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("scr")
-        pygame.display.set_icon(hex_images['icon'])
+        pygame.display.set_caption("nova_eclipse")
+        resource_manager = ResourceManager(self.images_dir)
+        pygame.display.set_icon(resource_manager.load_image('icon_population.png'))
         self.clock = pygame.time.Clock()
 
 

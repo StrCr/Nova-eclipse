@@ -1,7 +1,7 @@
 import pygame
 
-from constants import hex_images
-from settings import settings
+from scripts.constants import hex_images
+from scripts.settings import settings
 
 
 class TurnManager:
