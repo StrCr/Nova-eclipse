@@ -8,6 +8,7 @@ resource_manager = ResourceManager(settings.images_dir)
 hex_images = {
     'sun': resource_manager.load_image('Sun_Red.png'),
     'spaceship': resource_manager.load_image('spaceship.png'),
+    'transport_spaceship': resource_manager.load_image('transport.png'),
     'population': resource_manager.load_image('icon_population.png'),
     'production': resource_manager.load_image('icon_gear.png'),
     'power': resource_manager.load_image('icon_power.png'),
