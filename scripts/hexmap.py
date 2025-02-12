@@ -43,7 +43,7 @@ def generate_hex_map(center_cords, radius):
     if empty_hex:
         chosen_hex = random.choice(empty_hex)
         chosen_hex["value"] = 3
-        chosen_hex["power"] = 50
+        chosen_hex["fuel"] = 50
         empty_hex.remove(chosen_hex)
 
     return hex_map
@@ -125,7 +125,7 @@ class HexMap:
         target_hex["value"] = 3
         self.selected_spaceship["value"] = 0
         self.deselect_all()
-        self.spaceship_moved_this_turn = True  # Корабль походил в этот ход
+        self.spaceship_moved_this_turn = True
 
     def select_spaceship(self, hex):
         self.selected_spaceship = hex
@@ -170,6 +170,7 @@ class HexMap:
         # Draw objects (sun и spaceship)
         self.draw_hex_image(screen, 'sun', 2.5)
         self.draw_hex_image(screen, 'spaceship', 1)
+        self.draw_hex_image(screen, 'transport_spaceship', 1)
 
         # Draw planet menu
         if self.planet_menu_active and self.selected_planet:
@@ -179,7 +180,7 @@ class HexMap:
         pygame.draw.rect(screen, settings.colors['black'], (0, 0, settings.width, settings.info_bar_height))
         total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map)
         total_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
-        total_power = sum(one_hex.get("power", 0) for one_hex in self.hex_map)
+        total_power = sum(one_hex.get("fuel", 0) for one_hex in self.hex_map)
 
         info_bar_x_offset = 5
         info_bar_y_offset = 5
@@ -199,7 +200,7 @@ class HexMap:
         info_bar_x_offset += settings.icon_size + production_text.get_width() + 10
 
         # Draw Power
-        power_icon = pygame.transform.scale(hex_images['power'], (settings.icon_size, settings.icon_size))
+        power_icon = pygame.transform.scale(hex_images['fuel'], (settings.icon_size, settings.icon_size))
         screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
         power_text = self.font.render(f" {total_power}", True, settings.colors['white'])
         screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
