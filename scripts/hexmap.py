@@ -31,20 +31,28 @@ def generate_hex_map(center_cords, radius):
     planet_types_list = list(planet_types.keys())
     random.shuffle(planet_types_list)
     for i in range(random.randint(5, 6)):
-        if empty_hex:
-            chosen_hex = random.choice(empty_hex)
-            chosen_hex["value"] = 2
-            chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
-            chosen_hex["population"] = random.randint(5, 15)
-            chosen_hex["production"] = random.randint(5, 15)
-            empty_hex.remove(chosen_hex)
+        chosen_hex = random.choice(empty_hex)
+        chosen_hex["value"] = 2
+        chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
+        chosen_hex["population"] = random.randint(5, 15)
+        chosen_hex["production"] = random.randint(5, 15)
+        empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 3
-    if empty_hex:
-        chosen_hex = random.choice(empty_hex)
-        chosen_hex["value"] = 3
-        chosen_hex["fuel"] = 50
-        empty_hex.remove(chosen_hex)
+    chosen_hex = random.choice(empty_hex)
+    chosen_hex["value"] = 3
+    chosen_hex["fuel"] = 100
+    empty_hex.remove(chosen_hex)
+
+    # creating spaceship with value 4
+    possible_locations = [hex_tile for hex_tile in empty_hex if
+                          (hex_tile["r"] == settings.map_radius or hex_tile["r"] == -settings.map_radius or
+                           hex_tile["q"] == settings.map_radius or hex_tile["q"] == -settings.map_radius) or
+                          -hex_tile["q"] - hex_tile["r"] == settings.map_radius or
+                          -hex_tile["q"] - hex_tile["r"] == -settings.map_radius]
+    chosen_hex = random.choice(possible_locations)
+    chosen_hex["value"] = 4
+    empty_hex.remove(chosen_hex)
 
     return hex_map
 
@@ -67,6 +75,7 @@ class HexMap:
         self.event_menu_active = False
 
         # rects
+        # ToDo: переработать кнопки для бонусных евентовых менюшек или полностью убрать их
         self.exit_button_rect = None  # Exit from planet menu
         self.bonus_button_rect = None  # Enter the bonus menu
         self.event_button_rect = None  # Enter the event menu
@@ -123,7 +132,9 @@ class HexMap:
 
     def move_spaceship(self, target_hex):
         target_hex["value"] = 3
+        target_hex["fuel"] = self.selected_spaceship["fuel"] - 5
         self.selected_spaceship["value"] = 0
+        del self.selected_spaceship["fuel"]
         self.deselect_all()
         self.spaceship_moved_this_turn = True
 
@@ -243,14 +254,25 @@ class HexMap:
                                               (int(settings.hex_width) * size - settings.indent * size,
                                                int(settings.hex_width) * size - settings.indent * size))
         rect = scaled_image.get_rect()
+
+        # Draw ыгт with value 1 (Always in the center)
         if image == 'sun':
             rect.center = (settings.width // 2, settings.height // 2)
-        elif image == 'spaceship':
+            screen.blit(scaled_image, rect)
+        # Draw spaceship with value 3
+        if image == 'spaceship':
             for one_hex in self.hex_map:
                 if one_hex["value"] == 3:
                     rect = scaled_image.get_rect(center=(one_hex["x"], one_hex["y"]))
+                    screen.blit(scaled_image, rect)
                     break
-        screen.blit(scaled_image, rect)
+        # Draw transport_spaceship with value 4
+        if image == 'transport_spaceship':
+            for one_hex in self.hex_map:
+                if one_hex["value"] == 4:
+                    rect = scaled_image.get_rect(center=(one_hex["x"], one_hex["y"]))
+                    screen.blit(scaled_image, rect)
+                    break
 
     def draw_planet_menu(self, screen):
         # Draw menu background

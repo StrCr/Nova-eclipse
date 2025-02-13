@@ -48,7 +48,7 @@ def game():
     hex_map = hexmap.HexMap((settings.width // 2, settings.height // 2), settings.map_radius)
     background = pygame.transform.scale(resource_manager.load_image("cosmos.jpg"), (settings.width, settings.height))
 
-    while not turn_manager.is_game_over():
+    while not turn_manager.game_over:
         settings.screen.blit(background, (0, 0))
 
         for event in pygame.event.get():
