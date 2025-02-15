@@ -35,13 +35,15 @@ def generate_hex_map(center_cords, radius):
         chosen_hex["value"] = 2
         chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
         chosen_hex["population"] = random.randint(5, 15)
-        chosen_hex["production"] = random.randint(5, 15)
+        chosen_hex["specialization"] = None
         empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 3
     chosen_hex = random.choice(empty_hex)
     chosen_hex["value"] = 3
     chosen_hex["fuel"] = 100
+    chosen_hex["population"] = 1
+    chosen_hex["production"] = 1
     empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 4
@@ -52,6 +54,7 @@ def generate_hex_map(center_cords, radius):
                           -hex_tile["q"] - hex_tile["r"] == -settings.map_radius]
     chosen_hex = random.choice(possible_locations)
     chosen_hex["value"] = 4
+    chosen_hex["population"] = 0
     empty_hex.remove(chosen_hex)
 
     return hex_map
@@ -65,17 +68,18 @@ class HexMap:
         self.selected_spaceship = None
         self.movement_hex = []
         self.selected_planet = None
+        self.selected_transport = None
         self.spaceship_moved_this_turn = False
         self.font = pygame.font.Font(None, 30)
         self.save_map()
 
         # status
         self.planet_menu_active = False
+        self.transport_menu_active = False
         self.bonus_menu_active = False
         self.event_menu_active = False
 
         # rects
-        # ToDo: переработать кнопки для бонусных евентовых менюшек или полностью убрать их
         self.exit_button_rect = None  # Exit from planet menu
         self.bonus_button_rect = None  # Enter the bonus menu
         self.event_button_rect = None  # Enter the event menu
@@ -120,21 +124,34 @@ class HexMap:
                 self.event_menu_active = True
             return
 
+        # Transport menu buttons
+        if self.transport_menu_active:
+            if self.exit_button_rect and self.exit_button_rect.collidepoint(pos):
+                self.transport_menu_active = False
+                self.selected_transport = None
+            return
+
         # Selected hexagon
         if self.selected_spaceship and nearest_hex in self.movement_hex and not self.spaceship_moved_this_turn:
             self.move_spaceship(nearest_hex)
         elif nearest_hex["value"] == 3 and not self.spaceship_moved_this_turn:
             self.select_spaceship(nearest_hex)
-        elif nearest_hex["value"] == 2 and self.can_select_planet(nearest_hex):
+        elif nearest_hex["value"] == 2 and self.can_select_object(nearest_hex):
             self.select_planet(nearest_hex)
+        elif nearest_hex["value"] == 4 and self.can_select_object(nearest_hex):
+            self.select_transport_spaceship(nearest_hex)
         else:
             self.deselect_all()
 
     def move_spaceship(self, target_hex):
         target_hex["value"] = 3
         target_hex["fuel"] = self.selected_spaceship["fuel"] - 5
+        target_hex["population"] = self.selected_spaceship["population"]
+        target_hex["production"] = self.selected_spaceship["production"]
         self.selected_spaceship["value"] = 0
         del self.selected_spaceship["fuel"]
+        del self.selected_spaceship["population"]
+        del self.selected_spaceship["production"]
         self.deselect_all()
         self.spaceship_moved_this_turn = True
 
@@ -149,15 +166,22 @@ class HexMap:
         self.selected_spaceship = None
         self.movement_hex = []
 
+    def select_transport_spaceship(self, hex):
+        self.selected_transport = hex
+        self.transport_menu_active = True
+        self.selected_spaceship = None
+        self.movement_hex = []
+
     def deselect_all(self):
         self.selected_spaceship = None
         self.movement_hex = []
         self.selected_planet = None
         self.planet_menu_active = False
+        self.transport_menu_active = False
         self.bonus_menu_active = False
         self.event_menu_active = False
 
-    def can_select_planet(self, planet_hex):
+    def can_select_object(self, planet_hex):
         for other_hex in self.hex_map:
             if other_hex["value"] == 3 and hex_distance(planet_hex, other_hex) == 1:
                 return True
@@ -187,11 +211,15 @@ class HexMap:
         if self.planet_menu_active and self.selected_planet:
             self.draw_planet_menu(screen)
 
+        # Draw transport menu
+        if self.transport_menu_active and self.selected_transport:
+            self.draw_transport_menu(screen)
+
     def draw_info_bar(self, screen, turn):
         pygame.draw.rect(screen, settings.colors['black'], (0, 0, settings.width, settings.info_bar_height))
-        total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map)
+        total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map if one_hex.get("value") == 3)
         total_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
-        total_power = sum(one_hex.get("fuel", 0) for one_hex in self.hex_map)
+        total_fuel = sum(one_hex.get("fuel", 0) for one_hex in self.hex_map)
 
         info_bar_x_offset = 5
         info_bar_y_offset = 5
@@ -213,7 +241,7 @@ class HexMap:
         # Draw Power
         power_icon = pygame.transform.scale(hex_images['fuel'], (settings.icon_size, settings.icon_size))
         screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
-        power_text = self.font.render(f" {total_power}", True, settings.colors['white'])
+        power_text = self.font.render(f" {total_fuel}", True, settings.colors['white'])
         screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
 
         # Draw turn counter
@@ -229,7 +257,7 @@ class HexMap:
         if self.selected_spaceship == one_hex:
             color = settings.colors['red']
             width = 3
-        elif self.selected_planet == one_hex:
+        elif self.selected_planet == one_hex or self.selected_transport == one_hex:
             color = settings.colors['green']
             width = 3
         else:
@@ -255,7 +283,7 @@ class HexMap:
                                                int(settings.hex_width) * size - settings.indent * size))
         rect = scaled_image.get_rect()
 
-        # Draw ыгт with value 1 (Always in the center)
+        # Draw sun with value 1 (Always in the center)
         if image == 'sun':
             rect.center = (settings.width // 2, settings.height // 2)
             screen.blit(scaled_image, rect)
@@ -311,7 +339,7 @@ class HexMap:
         # Production
         prod_icon = pygame.transform.scale(hex_images['production'], (settings.menu_icon_size, settings.menu_icon_size))
         screen.blit(prod_icon, (stats_x, stats_y))
-        prod_text = self.font.render(f": {self.selected_planet.get('production')}", True, settings.colors['white'])
+        prod_text = self.font.render(f"Специализация: {self.selected_planet.get('production')}", True, settings.colors['white'])
         screen.blit(prod_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
         stats_y += settings.menu_icon_size + settings.menu_padding
 
@@ -321,3 +349,77 @@ class HexMap:
                          (planet_area_x, separator_y),
                          (menu_x + settings.menu_width - settings.menu_padding, separator_y),
                          settings.menu_line_width)
+
+        # Draw exit button
+        button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
+        button_y = menu_y + settings.menu_padding
+        pygame.draw.rect(screen, settings.colors['red'],
+                         (button_x, button_y, settings.exit_button_size, settings.exit_button_size))
+        pygame.draw.rect(screen, settings.colors['white'],
+                         (button_x - settings.exit_btn_outline, button_y - settings.exit_btn_outline,
+                          settings.exit_button_size + settings.exit_btn_outline * 2,
+                          settings.exit_button_size + settings.exit_btn_outline * 2),
+                         settings.exit_btn_outline)
+        exit_text = self.font.render('X', True, settings.colors['white'])
+        screen.blit(exit_text, (button_x + 9, button_y + 7))
+        self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
+
+    def draw_transport_menu(self, screen):
+        # Draw menu background
+        menu_x = settings.width // 2 - settings.menu_width // 2
+        menu_y = settings.height // 2 - settings.menu_height // 2
+        pygame.draw.rect(screen, settings.colors['black'], (menu_x, menu_y, settings.menu_width, settings.menu_height))
+        pygame.draw.rect(screen, settings.colors['white'], (
+            menu_x - settings.menu_outline, menu_y - settings.menu_outline,
+            settings.menu_width + settings.menu_outline * 2, settings.menu_height + settings.menu_outline * 2),
+                         settings.menu_outline)
+
+        # Draw planet image area
+        planet_area_x = menu_x + settings.menu_padding
+        planet_area_y = menu_y + settings.menu_padding
+        pygame.draw.rect(screen, settings.colors['white'],
+                         (planet_area_x, planet_area_y, settings.planet_image_size, settings.planet_image_size), 2)
+
+        # Draw planet image
+        transport_image = pygame.transform.scale(hex_images['transport_spaceship'], (
+            settings.planet_image_size - 2 * settings.menu_padding,
+            settings.planet_image_size - 2 * settings.menu_padding))
+        screen.blit(transport_image, (planet_area_x + settings.menu_padding, planet_area_y + settings.menu_padding))
+
+        stats_x = planet_area_x + settings.planet_image_size + settings.menu_padding
+        stats_y = planet_area_y
+
+        # Population
+        pop_icon = pygame.transform.scale(hex_images['population'], (settings.menu_icon_size, settings.menu_icon_size))
+        screen.blit(pop_icon, (stats_x, stats_y))
+        pop_text = self.font.render(f": {self.selected_transport.get('population')}", True, settings.colors['white'])
+        screen.blit(pop_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
+        stats_y += settings.menu_icon_size + settings.menu_padding
+
+        # # Production
+        # prod_icon = pygame.transform.scale(hex_images['production'], (settings.menu_icon_size, settings.menu_icon_size))
+        # screen.blit(prod_icon, (stats_x, stats_y))
+        # prod_text = self.font.render(f": {self.selected_planet.get('production')}", True, settings.colors['white'])
+        # screen.blit(prod_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
+        # stats_y += settings.menu_icon_size + settings.menu_padding
+
+        # Draw separation lines
+        separator_y = planet_area_y + settings.planet_image_size + settings.menu_padding
+        pygame.draw.line(screen, settings.colors['white'],
+                         (planet_area_x, separator_y),
+                         (menu_x + settings.menu_width - settings.menu_padding, separator_y),
+                         settings.menu_line_width)
+
+        # Draw exit button
+        button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
+        button_y = menu_y + settings.menu_padding
+        pygame.draw.rect(screen, settings.colors['red'],
+                         (button_x, button_y, settings.exit_button_size, settings.exit_button_size))
+        pygame.draw.rect(screen, settings.colors['white'],
+                         (button_x - settings.exit_btn_outline, button_y - settings.exit_btn_outline,
+                          settings.exit_button_size + settings.exit_btn_outline * 2,
+                          settings.exit_button_size + settings.exit_btn_outline * 2),
+                         settings.exit_btn_outline)
+        exit_text = self.font.render('X', True, settings.colors['white'])
+        screen.blit(exit_text, (button_x + 9, button_y + 7))
+        self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
