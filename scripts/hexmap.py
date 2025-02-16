@@ -106,13 +106,13 @@ class HexMap:
             elif self.fuel_button_100_rect and self.fuel_button_100_rect.collidepoint(pos):
                 self.add_resource_to_spaceship("fuel", 100)
             elif self.population_button_100_rect and self.population_button_100_rect.collidepoint(pos):
-                self.add_resource_to_spaceship("population", 100)
+                self.transfer_population_to_ship(100)  # Вызываем функцию для передачи населения, 100 - кол-во
             elif self.production_button_100_rect and self.production_button_100_rect.collidepoint(pos):
                 self.add_resource_to_spaceship("production", 100)
             elif self.fuel_button_10_rect and self.fuel_button_10_rect.collidepoint(pos):
                 self.add_resource_to_spaceship("fuel", 10)
             elif self.population_button_10_rect and self.population_button_10_rect.collidepoint(pos):
-                self.add_resource_to_spaceship("population", 10)
+                self.transfer_population_to_ship(10)  # Вызываем функцию для передачи населения, 10 - кол-во
             elif self.production_button_10_rect and self.production_button_10_rect.collidepoint(pos):
                 self.add_resource_to_spaceship("production", 10)
             return
@@ -465,3 +465,22 @@ class HexMap:
             if other_hex["value"] == 3:
                 if resource_type in other_hex:
                     other_hex[resource_type] += amount
+
+    def transfer_population_to_ship(self, amount):
+        """Transfers population from the selected planet to the nearest spaceship."""
+        nearest_spaceship = None
+
+        for other_hex in self.hex_map:
+            if other_hex["value"] == 3:
+                nearest_spaceship = other_hex
+
+        if nearest_spaceship is None:
+            return
+
+        if self.selected_planet["population"] >= amount:
+            self.selected_planet["population"] -= amount
+            nearest_spaceship["population"] += amount
+        else:
+            amount = self.selected_planet["population"]
+            nearest_spaceship["population"] += amount
+            self.selected_planet["population"] = 0

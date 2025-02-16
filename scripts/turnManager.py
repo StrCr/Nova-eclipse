@@ -6,7 +6,6 @@ from scripts.settings import settings
 
 class TurnManager:
     """Control moves in the game"""
-
     def __init__(self):
         self.game_over = False
         self.turn_count = 0
@@ -23,17 +22,17 @@ class TurnManager:
 
     def handle_input(self, event, hexmap):
         """Changes the move and checks whether the game is finished"""
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.turn_button_rect.collidepoint(event.pos):
-                for one_cell in hexmap.hex_map:
-                    if one_cell["value"] == 3 and "fuel" in one_cell and one_cell['fuel'] <= 0:
-                        self.game_over = True
-                if self.turn_count >= self.max_turns:
+        if ((event.type == pygame.MOUSEBUTTONDOWN and self.turn_button_rect.collidepoint(event.pos)) or
+            (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):  # изменить
+            for one_cell in hexmap.hex_map:
+                if one_cell["value"] == 3 and "fuel" in one_cell and one_cell['fuel'] <= 0:
                     self.game_over = True
-                hexmap.deselect_all()
-                self.turn_count += 1
-                hexmap.spaceship_moved_this_turn = False
-                hexmap.save_map()
+            if self.turn_count >= self.max_turns:
+                self.game_over = True
+            hexmap.deselect_all()
+            hexmap.spaceship_moved_this_turn = False
+            self.turn_count += 1
+            hexmap.save_map()  # изменить
 
 
 turn_manager = TurnManager()
