@@ -23,7 +23,7 @@ class TurnManager:
     def handle_input(self, event, hexmap):
         """Changes the move and checks whether the game is finished"""
         if ((event.type == pygame.MOUSEBUTTONDOWN and self.turn_button_rect.collidepoint(event.pos)) or
-            (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):  # изменить
+           (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):  # изменить
             for one_cell in hexmap.hex_map:
                 if one_cell["value"] == 3 and "fuel" in one_cell and one_cell['fuel'] <= 0:
                     self.game_over = True

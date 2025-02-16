@@ -86,12 +86,9 @@
     {
         "q": -5,
         "r": 4,
-        "value": 3,
+        "value": 0,
         "x": 318.1346652052679,
-        "y": 585.0,
-        "fuel": 100,
-        "population": 0,
-        "production": 0
+        "y": 585.0
     },
     {
         "q": -5,
@@ -222,12 +219,9 @@
     {
         "q": -3,
         "r": 4,
-        "value": 2,
+        "value": 0,
         "x": 439.37822173508926,
-        "y": 585.0,
-        "planet_type": "snowy",
-        "population": 1559,
-        "specialization": null
+        "y": 585.0
     },
     {
         "q": -3,
@@ -239,12 +233,9 @@
     {
         "q": -3,
         "r": 6,
-        "value": 2,
+        "value": 0,
         "x": 500.0,
-        "y": 690.0,
-        "planet_type": "lunar",
-        "population": 1207,
-        "specialization": null
+        "y": 690.0
     },
     {
         "q": -2,
@@ -298,12 +289,9 @@
     {
         "q": -2,
         "r": 3,
-        "value": 2,
+        "value": 0,
         "x": 469.6891108675447,
-        "y": 532.5,
-        "planet_type": "tropical",
-        "population": 1003,
-        "specialization": null
+        "y": 532.5
     },
     {
         "q": -2,
@@ -336,16 +324,22 @@
     {
         "q": -1,
         "r": -4,
-        "value": 0,
+        "value": 2,
         "x": 318.1346652052679,
-        "y": 165.0
+        "y": 165.0,
+        "planet_type": "ocean",
+        "population": 1171,
+        "specialization": null
     },
     {
         "q": -1,
         "r": -3,
-        "value": 0,
+        "value": 2,
         "x": 348.44555433772325,
-        "y": 217.5
+        "y": 217.5,
+        "planet_type": "tropical",
+        "population": 1739,
+        "specialization": null
     },
     {
         "q": -1,
@@ -427,12 +421,9 @@
     {
         "q": 0,
         "r": -4,
-        "value": 2,
+        "value": 0,
         "x": 378.7564434701786,
-        "y": 165.0,
-        "planet_type": "muddy",
-        "population": 1590,
-        "specialization": null
+        "y": 165.0
     },
     {
         "q": 0,
@@ -500,9 +491,12 @@
     {
         "q": 0,
         "r": 6,
-        "value": 0,
+        "value": 2,
         "x": 681.8653347947321,
-        "y": 690.0
+        "y": 690.0,
+        "planet_type": "lunar",
+        "population": 1563,
+        "specialization": null
     },
     {
         "q": 1,
@@ -570,9 +564,12 @@
     {
         "q": 1,
         "r": 3,
-        "value": 0,
+        "value": 3,
         "x": 651.5544456622767,
-        "y": 532.5
+        "y": 532.5,
+        "fuel": 75,
+        "population": 0,
+        "production": 0
     },
     {
         "q": 1,
@@ -591,10 +588,9 @@
     {
         "q": 2,
         "r": -6,
-        "value": 4,
+        "value": 0,
         "x": 439.37822173508926,
-        "y": 60.0,
-        "population": 0
+        "y": 60.0
     },
     {
         "q": 2,
@@ -662,9 +658,10 @@
     {
         "q": 2,
         "r": 4,
-        "value": 0,
+        "value": 4,
         "x": 742.4871130596428,
-        "y": 585.0
+        "y": 585.0,
+        "population": 0
     },
     {
         "q": 3,
@@ -683,16 +680,22 @@
     {
         "q": 3,
         "r": -4,
-        "value": 0,
+        "value": 2,
         "x": 560.6217782649107,
-        "y": 165.0
+        "y": 165.0,
+        "planet_type": "snowy",
+        "population": 1847,
+        "specialization": null
     },
     {
         "q": 3,
         "r": -3,
-        "value": 0,
+        "value": 2,
         "x": 590.932667397366,
-        "y": 217.5
+        "y": 217.5,
+        "planet_type": "cloudy",
+        "population": 1541,
+        "specialization": null
     },
     {
         "q": 3,
@@ -725,12 +728,9 @@
     {
         "q": 3,
         "r": 2,
-        "value": 2,
+        "value": 0,
         "x": 742.4871130596429,
-        "y": 480.0,
-        "planet_type": "cloudy",
-        "population": 1630,
-        "specialization": null
+        "y": 480.0
     },
     {
         "q": 3,
@@ -798,9 +798,12 @@
     {
         "q": 4,
         "r": 2,
-        "value": 0,
+        "value": 2,
         "x": 803.1088913245535,
-        "y": 480.0
+        "y": 480.0,
+        "planet_type": "muddy",
+        "population": 1391,
+        "specialization": null
     },
     {
         "q": 5,
@@ -819,12 +822,9 @@
     {
         "q": 5,
         "r": -4,
-        "value": 2,
+        "value": 0,
         "x": 681.8653347947321,
-        "y": 165.0,
-        "planet_type": "ocean",
-        "population": 1321,
-        "specialization": null
+        "y": 165.0
     },
     {
         "q": 5,
