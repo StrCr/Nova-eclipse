@@ -280,6 +280,7 @@ class HexMap:
         screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
         power_text = self.font.render(f" {total_fuel}", True, settings.colors['white'])
         screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
+        info_bar_x_offset += settings.icon_size + power_text.get_width() + 10
 
         # Draw turn counter
         turn_text = self.font.render(f"{turn.turn_count}/{turn.max_turns}", True, settings.colors['white'])
@@ -467,7 +468,8 @@ class HexMap:
         pygame.draw.rect(screen, settings.colors['white'],
                          (button_x - settings.exit_btn_outline, button_y - settings.exit_btn_outline,
                          settings.exit_button_size + settings.exit_btn_outline * 2,
-                         settings.exit_button_size + settings.exit_btn_outline * 2), settings.exit_btn_outline)
+                         settings.exit_button_size + settings.exit_btn_outline * 2),
+                         settings.exit_btn_outline)
         exit_text = self.font.render('X', True, settings.colors['white'])
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
@@ -477,10 +479,20 @@ class HexMap:
         pygame.draw.rect(screen, color, (x, y, settings.resource_button_width, settings.resource_button_height))
         pygame.draw.rect(screen, settings.colors['white'],
                          (x, y, settings.resource_button_width, settings.resource_button_height), 1)
+
         text_surface = self.font.render(text, True, settings.colors['white'])
-        text_rect = text_surface.get_rect(midleft=(x + settings.menu_padding, y + settings.resource_button_height // 2))
-        screen.blit(text_surface, text_rect)
-        screen.blit(icon, (x + text_surface.get_width() + settings.menu_padding, y))
+        text_width, text_height = text_surface.get_size()
+        icon_width, icon_height = icon.get_size()
+        total_width = text_width + icon_width
+
+        text_x = x + (settings.resource_button_width - total_width) // 2
+        text_y = y + (settings.resource_button_height - text_height) // 2
+        icon_x = text_x + text_width
+        icon_y = y + (settings.resource_button_height - icon_height) // 2
+
+        screen.blit(text_surface, (text_x, text_y))
+        screen.blit(icon, (icon_x, icon_y))
+
         return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height)
 
     def draw_specialization_button(self, screen, x, y, icon):
@@ -490,7 +502,7 @@ class HexMap:
         pygame.draw.rect(screen, settings.colors['white'],
                          (x, y, settings.resource_button_width, settings.resource_button_height), 1)
         screen.blit(icon, (x + settings.resource_button_width // 2 - icon.get_width() // 2, y))
-        return pygame.Rect(x, y, settings.resource_button_height, settings.resource_button_height)
+        return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height)
 
     def draw_transport_menu(self, screen):
         # Draw menu background
