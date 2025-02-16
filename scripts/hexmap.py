@@ -34,7 +34,7 @@ def generate_hex_map(center_cords, radius):
         chosen_hex = random.choice(empty_hex)
         chosen_hex["value"] = 2
         chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
-        chosen_hex["population"] = random.randint(5, 15)
+        chosen_hex["population"] = random.randint(1000, 2000)
         chosen_hex["specialization"] = None
         empty_hex.remove(chosen_hex)
 
@@ -42,8 +42,8 @@ def generate_hex_map(center_cords, radius):
     chosen_hex = random.choice(empty_hex)
     chosen_hex["value"] = 3
     chosen_hex["fuel"] = 100
-    chosen_hex["population"] = 1
-    chosen_hex["production"] = 1
+    chosen_hex["population"] = 0
+    chosen_hex["production"] = 0
     empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 4
@@ -73,18 +73,21 @@ class HexMap:
         self.font = pygame.font.Font(None, 30)
         self.save_map()
 
-        # status
+        # Status
         self.planet_menu_active = False
         self.transport_menu_active = False
-        self.bonus_menu_active = False
-        self.event_menu_active = False
 
-        # rects
-        self.exit_button_rect = None  # Exit from planet menu
-        self.bonus_button_rect = None  # Enter the bonus menu
-        self.event_button_rect = None  # Enter the event menu
-        self.return_button_rect = None  # Return from bonus/event
-        self.menu_exit_button_rect = None  # Exit from bonus/event to game
+        # Planet menu rects
+        self.exit_button_rect = None
+        self.fuel_button_100_rect = None
+        self.population_button_100_rect = None
+        self.production_button_100_rect = None
+        self.fuel_button_10_rect = None
+        self.population_button_10_rect = None
+        self.production_button_10_rect = None
+        self.specialize_fuel_rect = None
+        self.specialize_population_rect = None
+        self.specialize_production_rect = None
 
     def save_map(self):
         file_path = os.path.join(settings.save_dir, "map.json")
@@ -95,33 +98,23 @@ class HexMap:
         mouse_x, mouse_y = pos
         nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
 
-        # Exit/return buttons
-        if self.bonus_menu_active or self.event_menu_active:
-            if self.menu_exit_button_rect and self.menu_exit_button_rect.collidepoint(pos):
-                self.bonus_menu_active = False
-                self.event_menu_active = False
-                self.planet_menu_active = False
-                self.selected_planet = None
-                return
-            elif self.return_button_rect and self.return_button_rect.collidepoint(pos):
-                self.bonus_menu_active = False
-                self.event_menu_active = False
-                self.planet_menu_active = True
-                return
-            else:
-                return
-
         # Planet menu buttons
         if self.planet_menu_active:
             if self.exit_button_rect and self.exit_button_rect.collidepoint(pos):
                 self.planet_menu_active = False
                 self.selected_planet = None
-            elif self.bonus_button_rect and self.bonus_button_rect.collidepoint(pos):
-                self.planet_menu_active = False
-                self.bonus_menu_active = True
-            elif self.event_button_rect and self.event_button_rect.collidepoint(pos):
-                self.planet_menu_active = False
-                self.event_menu_active = True
+            elif self.fuel_button_100_rect and self.fuel_button_100_rect.collidepoint(pos):
+                self.add_resource_to_spaceship("fuel", 100)
+            elif self.population_button_100_rect and self.population_button_100_rect.collidepoint(pos):
+                self.add_resource_to_spaceship("population", 100)
+            elif self.production_button_100_rect and self.production_button_100_rect.collidepoint(pos):
+                self.add_resource_to_spaceship("production", 100)
+            elif self.fuel_button_10_rect and self.fuel_button_10_rect.collidepoint(pos):
+                self.add_resource_to_spaceship("fuel", 10)
+            elif self.population_button_10_rect and self.population_button_10_rect.collidepoint(pos):
+                self.add_resource_to_spaceship("population", 10)
+            elif self.production_button_10_rect and self.production_button_10_rect.collidepoint(pos):
+                self.add_resource_to_spaceship("production", 10)
             return
 
         # Transport menu buttons
@@ -178,8 +171,6 @@ class HexMap:
         self.selected_planet = None
         self.planet_menu_active = False
         self.transport_menu_active = False
-        self.bonus_menu_active = False
-        self.event_menu_active = False
 
     def can_select_object(self, planet_hex):
         for other_hex in self.hex_map:
@@ -329,16 +320,29 @@ class HexMap:
         stats_x = planet_area_x + settings.planet_image_size + settings.menu_padding
         stats_y = planet_area_y
 
+        # Icons
+        population_icon = pygame.transform.scale(hex_images['population'],
+                                                 (settings.menu_icon_size, settings.menu_icon_size))
+        production_icon = pygame.transform.scale(hex_images['production'],
+                                                 (settings.menu_icon_size, settings.menu_icon_size))
+        fuel_icon = pygame.transform.scale(hex_images['fuel'],
+                                           (settings.menu_icon_size, settings.menu_icon_size))
+        # Mini icons
+        mini_population_icon = pygame.transform.scale(hex_images['population'],
+                                                 (settings.resource_button_height, settings.resource_button_height))
+        mini_production_icon = pygame.transform.scale(hex_images['production'],
+                                                 (settings.resource_button_height, settings.resource_button_height))
+        mini_fuel_icon = pygame.transform.scale(hex_images['fuel'],
+                                           (settings.resource_button_height, settings.resource_button_height))
+
         # Population
-        pop_icon = pygame.transform.scale(hex_images['population'], (settings.menu_icon_size, settings.menu_icon_size))
-        screen.blit(pop_icon, (stats_x, stats_y))
+        screen.blit(population_icon, (stats_x, stats_y))
         pop_text = self.font.render(f": {self.selected_planet.get('population')}", True, settings.colors['white'])
         screen.blit(pop_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
         stats_y += settings.menu_icon_size + settings.menu_padding
 
         # Production
-        prod_icon = pygame.transform.scale(hex_images['production'], (settings.menu_icon_size, settings.menu_icon_size))
-        screen.blit(prod_icon, (stats_x, stats_y))
+        screen.blit(production_icon, (stats_x, stats_y))
         prod_text = self.font.render(f"Специализация: {self.selected_planet.get('production')}", True, settings.colors['white'])
         screen.blit(prod_text, (stats_x + settings.menu_icon_size, stats_y + (settings.menu_icon_size // 4)))
         stats_y += settings.menu_icon_size + settings.menu_padding
@@ -349,6 +353,27 @@ class HexMap:
                          (planet_area_x, separator_y),
                          (menu_x + settings.menu_width - settings.menu_padding, separator_y),
                          settings.menu_line_width)
+
+        # Resource Buttons
+        button_x = menu_x + settings.menu_padding
+        button_y = separator_y + settings.menu_padding
+
+        # Resources buttons row 1
+        self.fuel_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+100", settings.colors['black'])
+        button_x += settings.resource_button_width + settings.resource_button_padding
+        self.population_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_population_icon, "+100", settings.colors['black'])
+        button_x += settings.resource_button_width + settings.resource_button_padding
+        self.production_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_production_icon, "+100", settings.colors['black'])
+
+        # Resources buttons row 2
+        button_x = menu_x + settings.menu_padding
+        button_y += settings.resource_button_height + settings.resource_button_padding
+
+        self.fuel_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+10", settings.colors['black'])
+        button_x += settings.resource_button_width + settings.resource_button_padding
+        self.population_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_population_icon, "+10", settings.colors['black'])
+        button_x += settings.resource_button_width + settings.resource_button_padding
+        self.production_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_production_icon, "+10", settings.colors['black'])
 
         # Draw exit button
         button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
@@ -363,6 +388,16 @@ class HexMap:
         exit_text = self.font.render('X', True, settings.colors['white'])
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
+
+    def draw_resource_button(self, screen, x, y, icon, text, color):
+        """Draws a resource button and returns its rect"""
+        pygame.draw.rect(screen, color, (x, y, settings.resource_button_width, settings.resource_button_height))
+        pygame.draw.rect(screen, settings.colors['white'], (x, y, settings.resource_button_width, settings.resource_button_height), 1)
+        text_surface = self.font.render(text, True, settings.colors['white'])
+        text_rect = text_surface.get_rect(midleft=(x + settings.menu_padding, y + settings.resource_button_height // 2))
+        screen.blit(text_surface, text_rect)
+        screen.blit(icon, (x + text_surface.get_width() + settings.menu_padding, y))
+        return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height)
 
     def draw_transport_menu(self, screen):
         # Draw menu background
@@ -423,3 +458,10 @@ class HexMap:
         exit_text = self.font.render('X', True, settings.colors['white'])
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
+
+    def add_resource_to_spaceship(self, resource_type, amount):
+        """Adds resources to the nearest spaceship."""
+        for other_hex in self.hex_map:
+            if other_hex["value"] == 3:
+                if resource_type in other_hex:
+                    other_hex[resource_type] += amount

@@ -44,6 +44,9 @@ class GameSettings:
         self.button_width = 150
         self.button_height = 40
         self.turn_button_size = 90
+        self.resource_button_width = 150
+        self.resource_button_height = 30
+        self.resource_button_padding = 15
 
         # Ways to files
         self.data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
