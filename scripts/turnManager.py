@@ -29,11 +29,8 @@ class TurnManager:
                     self.game_over = True
             if self.turn_count >= self.max_turns:
                 self.game_over = True
-            hexmap.deselect_all()
-            hexmap.spaceship_moved_this_turn = False
             self.turn_count += 1
-            hexmap.save_map()  # изменить
-
+            hexmap.update()
 
 
 turn_manager = TurnManager()

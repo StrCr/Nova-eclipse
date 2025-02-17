@@ -34,7 +34,7 @@ def generate_hex_map(center_cords, radius):
         chosen_hex = random.choice(empty_hex)
         chosen_hex["value"] = 2
         chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
-        chosen_hex["population"] = random.randint(1000, 2000)
+        chosen_hex["population"] = random.randint(10, 20)
         chosen_hex["specialization"] = None
         chosen_hex["is_planet_active"] = True
         empty_hex.remove(chosen_hex)
@@ -94,16 +94,33 @@ class HexMap:
         self.specialize_population_rect = None
         self.specialize_production_rect = None
 
+        # Turn restrictions
+        self.turns_since_last_specialization = 0
+        self.specialization_cooldown = 5
+        self.can_specialize = True
+
     def save_map(self):
         file_path = os.path.join(settings.save_dir, "map.json")
         with open(file_path, "w") as file:
             json.dump(self.hex_map, file, indent=4)
+
+    def update(self):
+        """Call every turn"""
+        if not self.can_specialize:
+            self.turns_since_last_specialization += 1
+            if self.turns_since_last_specialization >= self.specialization_cooldown:
+                self.can_specialize = True
+                self.turns_since_last_specialization = 0
+        self.deselect_all()
+        self.spaceship_moved_this_turn = False
+        self.save_map()
 
     def get_clicked_hex(self, pos):
         mouse_x, mouse_y = pos
 
         # Planet menu buttons
         if self.planet_menu_active:
+
             # Exit button click
             if self.exit_button_rect and self.exit_button_rect.collidepoint(pos):
                 self.planet_menu_active = False
@@ -147,13 +164,15 @@ class HexMap:
                 return
 
             # Specialization buttons click
-            elif self.specialize_fuel_rect and self.specialize_fuel_rect.collidepoint(pos):
+            elif self.specialize_fuel_rect and self.specialize_fuel_rect.collidepoint(pos) and self.can_specialize:
                 self.set_planet_specialization("fuel")
                 return
-            elif self.specialize_population_rect and self.specialize_population_rect.collidepoint(pos):
+            elif (self.specialize_population_rect and self.specialize_population_rect.collidepoint(pos) and
+                  self.can_specialize):
                 self.set_planet_specialization("population")
                 return
-            elif self.specialize_production_rect and self.specialize_production_rect.collidepoint(pos):
+            elif (self.specialize_production_rect and self.specialize_production_rect.collidepoint(pos) and
+                  self.can_specialize):
                 self.set_planet_specialization("production")
                 return
 
@@ -233,6 +252,7 @@ class HexMap:
         if self.selected_planet:
             self.selected_planet["specialization"] = specialization
             self.save_map()
+            self.can_specialize = False
 
     def transfer_population_to_ship(self, amount):
         """Transfers population from the selected planet to the nearest spaceship."""
@@ -393,143 +413,6 @@ class HexMap:
         stats_x = planet_area_x + settings.planet_image_size + settings.menu_padding
         stats_y = planet_area_y
 
-        # Icons
-        population_icon = pygame.transform.scale(hex_images['population'], (settings.menu_icon_size,
-                                                                            settings.menu_icon_size))
-        production_icon = pygame.transform.scale(hex_images['production'], (settings.menu_icon_size,
-                                                                            settings.menu_icon_size))
-        fuel_icon = pygame.transform.scale(hex_images['fuel'], (settings.menu_icon_size,
-                                                                settings.menu_icon_size))
-
-        # Mini icons
-        mini_population_icon = pygame.transform.scale(hex_images['population'], (settings.resource_button_height,
-                                                                                 settings.resource_button_height))
-        mini_production_icon = pygame.transform.scale(hex_images['production'], (settings.resource_button_height,
-                                                                                 settings.resource_button_height))
-        mini_fuel_icon = pygame.transform.scale(hex_images['fuel'], (settings.resource_button_height,
-                                                                     settings.resource_button_height))
-
-        # Population
-        population_text = self.font.render(f"{self.selected_planet.get('population')}", True, settings.colors['white'])
-        screen.blit(population_text, (stats_x, stats_y + (settings.menu_icon_size // 4)))
-        screen.blit(population_icon, (stats_x + population_text.get_width(), stats_y))
-        stats_y += settings.menu_icon_size + settings.menu_padding
-
-        # Specialization
-        specialization = self.selected_planet.get('specialization')
-        specialization_icon = None
-
-        if specialization == "fuel":
-            specialization_icon = fuel_icon
-        elif specialization == "population":
-            specialization_icon = population_icon
-        elif specialization == "production":
-            specialization_icon = production_icon
-
-        specialization_text = self.font.render(f"Специализация:", True, settings.colors['white'])
-        screen.blit(specialization_text, (stats_x, stats_y + (settings.menu_icon_size // 4)))
-
-        if specialization_icon:
-            screen.blit(specialization_icon, (stats_x + specialization_text.get_width(), stats_y))
-        stats_y += settings.menu_icon_size + settings.menu_padding
-
-        # Draw separation lines
-        separator_y = planet_area_y + settings.planet_image_size + settings.menu_padding
-        pygame.draw.line(screen, settings.colors['white'], (planet_area_x, separator_y),
-                         (menu_x + settings.menu_width - settings.menu_padding, separator_y), settings.menu_line_width)
-
-        # Resource Buttons
-        button_x = menu_x + settings.menu_padding
-        button_y = separator_y + settings.menu_padding
-
-        # Are the buttons active depending on the specialization
-        fuel_100_active = False
-        population_100_active = False
-        production_100_active = False
-        fuel_10_active = False
-        population_10_active = False
-        production_10_active = False
-
-        if specialization and self.selected_planet.get('is_planet_active'):
-            fuel_100_active = specialization == "fuel"
-            population_100_active = specialization == "population"
-            production_100_active = specialization == "production"
-            fuel_10_active = specialization != "fuel"
-            population_10_active = specialization != "population"
-            production_10_active = specialization != "production"
-
-        # Resources buttons row 1
-        self.fuel_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+100",
-                                                              settings.colors['white'] if fuel_100_active
-                                                              else settings.colors['black'],
-                                                              settings.colors['black'] if fuel_100_active
-                                                              else settings.colors['grey'],
-                                                              fuel_100_active)
-        button_x += settings.resource_button_width + settings.resource_button_padding
-        self.population_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_population_icon,
-                                                                    "+100",
-                                                                    settings.colors['white'] if population_100_active
-                                                                    else settings.colors['black'],
-                                                                    settings.colors['black'] if population_100_active
-                                                                    else settings.colors['grey'],
-                                                                    population_100_active)
-        button_x += settings.resource_button_width + settings.resource_button_padding
-        self.production_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_production_icon,
-                                                                    "+100",
-                                                                    settings.colors['white'] if production_100_active
-                                                                    else settings.colors['black'],
-                                                                    settings.colors['black'] if production_100_active
-                                                                    else settings.colors['grey'],
-                                                                    production_100_active)
-
-        # Resources buttons row 2
-        button_x = menu_x + settings.menu_padding
-        button_y += settings.resource_button_height + settings.resource_button_padding
-
-        self.fuel_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+10",
-                                                             settings.colors['white'] if fuel_10_active
-                                                             else settings.colors['black'],
-                                                             settings.colors['black'] if fuel_10_active
-                                                             else settings.colors['grey'],
-                                                             fuel_10_active)
-        button_x += settings.resource_button_width + settings.resource_button_padding
-        self.population_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_population_icon,
-                                                                   "+10",
-                                                                   settings.colors['white'] if population_10_active
-                                                                   else settings.colors['black'],
-                                                                   settings.colors['black'] if population_10_active
-                                                                   else settings.colors['grey'],
-                                                                   population_10_active)
-        button_x += settings.resource_button_width + settings.resource_button_padding
-        self.production_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_production_icon,
-                                                                   "+10",
-                                                                   settings.colors['white'] if production_10_active
-                                                                   else settings.colors['black'],
-                                                                   settings.colors['black'] if production_10_active
-                                                                   else settings.colors['grey'],
-                                                                   production_10_active)
-
-        # Draw separation lines
-        separator_y = button_y + settings.resource_button_height + settings.menu_padding
-        pygame.draw.line(screen, settings.colors['white'], (planet_area_x, separator_y),
-                         (menu_x + settings.menu_width - settings.menu_padding, separator_y), settings.menu_line_width)
-
-        # Specialization buttons row 3
-        specialize_button_y = separator_y + settings.menu_padding
-
-        specialize_fuel_x = menu_x + settings.menu_padding
-        self.specialize_fuel_rect = self.draw_specialization_button(screen, specialize_fuel_x,
-                                                                    specialize_button_y, mini_fuel_icon, True)
-
-        specialize_population_x = specialize_fuel_x + settings.resource_button_width + settings.resource_button_padding
-        self.specialize_population_rect = self.draw_specialization_button(screen, specialize_population_x,
-                                                                          specialize_button_y, mini_population_icon, True)
-
-        specialize_production_x = (specialize_population_x + settings.resource_button_width +
-                                   settings.resource_button_padding)
-        self.specialize_production_rect = self.draw_specialization_button(screen, specialize_production_x,
-                                                                          specialize_button_y, mini_production_icon, True)
-
         # Draw exit button
         button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
         button_y = menu_y + settings.menu_padding
@@ -537,12 +420,160 @@ class HexMap:
                          (button_x, button_y, settings.exit_button_size, settings.exit_button_size))
         pygame.draw.rect(screen, settings.colors['white'],
                          (button_x - settings.exit_btn_outline, button_y - settings.exit_btn_outline,
-                         settings.exit_button_size + settings.exit_btn_outline * 2,
-                         settings.exit_button_size + settings.exit_btn_outline * 2),
+                          settings.exit_button_size + settings.exit_btn_outline * 2,
+                          settings.exit_button_size + settings.exit_btn_outline * 2),
                          settings.exit_btn_outline)
         exit_text = self.font.render('X', True, settings.colors['white'])
         screen.blit(exit_text, (button_x + 9, button_y + 7))
         self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
+
+        if self.selected_planet["population"] > 0:
+
+            # Icons
+            population_icon = pygame.transform.scale(hex_images['population'], (settings.menu_icon_size,
+                                                                                settings.menu_icon_size))
+            production_icon = pygame.transform.scale(hex_images['production'], (settings.menu_icon_size,
+                                                                                settings.menu_icon_size))
+            fuel_icon = pygame.transform.scale(hex_images['fuel'], (settings.menu_icon_size,
+                                                                    settings.menu_icon_size))
+
+            # Mini icons
+            mini_population_icon = pygame.transform.scale(hex_images['population'], (settings.resource_button_height,
+                                                                                     settings.resource_button_height))
+            mini_production_icon = pygame.transform.scale(hex_images['production'], (settings.resource_button_height,
+                                                                                     settings.resource_button_height))
+            mini_fuel_icon = pygame.transform.scale(hex_images['fuel'], (settings.resource_button_height,
+                                                                         settings.resource_button_height))
+
+            # Population
+            population_text = self.font.render(f"{self.selected_planet.get('population')}", True,
+                                               settings.colors['white'])
+            screen.blit(population_text, (stats_x, stats_y + (settings.menu_icon_size // 4)))
+            screen.blit(population_icon, (stats_x + population_text.get_width(), stats_y))
+            stats_y += settings.menu_icon_size + settings.menu_padding
+
+            # Specialization
+            specialization = self.selected_planet.get('specialization')
+            specialization_icon = None
+
+            if specialization == "fuel":
+                specialization_icon = fuel_icon
+            elif specialization == "population":
+                specialization_icon = population_icon
+            elif specialization == "production":
+                specialization_icon = production_icon
+
+            specialization_text = self.font.render(f"Специализация:", True, settings.colors['white'])
+            screen.blit(specialization_text, (stats_x, stats_y + (settings.menu_icon_size // 4)))
+
+            if specialization_icon:
+                screen.blit(specialization_icon, (stats_x + specialization_text.get_width(), stats_y))
+            stats_y += settings.menu_icon_size + settings.menu_padding
+
+            # Draw separation lines
+            separator_y = planet_area_y + settings.planet_image_size + settings.menu_padding
+            pygame.draw.line(screen, settings.colors['white'], (planet_area_x, separator_y),
+                             (menu_x + settings.menu_width - settings.menu_padding, separator_y),
+                             settings.menu_line_width)
+
+            # Resource Buttons
+            button_x = menu_x + settings.menu_padding
+            button_y = separator_y + settings.menu_padding
+
+            # Are the buttons active depending on the specialization
+            fuel_100_active = False
+            population_100_active = False
+            production_100_active = False
+            fuel_10_active = False
+            population_10_active = False
+            production_10_active = False
+
+            if specialization and self.selected_planet.get('is_planet_active'):
+                fuel_100_active = specialization == "fuel"
+                population_100_active = specialization == "population"
+                production_100_active = specialization == "production"
+                fuel_10_active = specialization != "fuel"
+                population_10_active = specialization != "population"
+                production_10_active = specialization != "production"
+
+            specialize_buttons_active = self.can_specialize
+
+            # Resources buttons row 1
+            self.fuel_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+100",
+                                                                  settings.colors['white'] if fuel_100_active
+                                                                  else settings.colors['black'],
+                                                                  settings.colors['black'] if fuel_100_active
+                                                                  else settings.colors['grey'],
+                                                                  fuel_100_active)
+            button_x += settings.resource_button_width + settings.resource_button_padding
+            self.population_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_population_icon,
+                                                                        "+100",
+                                                                        settings.colors['white'] if population_100_active
+                                                                        else settings.colors['black'],
+                                                                        settings.colors['black'] if population_100_active
+                                                                        else settings.colors['grey'],
+                                                                        population_100_active)
+            button_x += settings.resource_button_width + settings.resource_button_padding
+            self.production_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_production_icon,
+                                                                        "+100",
+                                                                        settings.colors['white'] if production_100_active
+                                                                        else settings.colors['black'],
+                                                                        settings.colors['black'] if production_100_active
+                                                                        else settings.colors['grey'],
+                                                                        production_100_active)
+
+            # Resources buttons row 2
+            button_x = menu_x + settings.menu_padding
+            button_y += settings.resource_button_height + settings.resource_button_padding
+
+            self.fuel_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+10",
+                                                                 settings.colors['white'] if fuel_10_active
+                                                                 else settings.colors['black'],
+                                                                 settings.colors['black'] if fuel_10_active
+                                                                 else settings.colors['grey'],
+                                                                 fuel_10_active)
+            button_x += settings.resource_button_width + settings.resource_button_padding
+            self.population_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_population_icon,
+                                                                       "+10",
+                                                                       settings.colors['white'] if population_10_active
+                                                                       else settings.colors['black'],
+                                                                       settings.colors['black'] if population_10_active
+                                                                       else settings.colors['grey'],
+                                                                       population_10_active)
+            button_x += settings.resource_button_width + settings.resource_button_padding
+            self.production_button_10_rect = self.draw_resource_button(screen, button_x, button_y, mini_production_icon,
+                                                                       "+10",
+                                                                       settings.colors['white'] if production_10_active
+                                                                       else settings.colors['black'],
+                                                                       settings.colors['black'] if production_10_active
+                                                                       else settings.colors['grey'],
+                                                                       production_10_active)
+
+            # Draw separation lines
+            separator_y = button_y + settings.resource_button_height + settings.menu_padding
+            pygame.draw.line(screen, settings.colors['white'], (planet_area_x, separator_y),
+                             (menu_x + settings.menu_width - settings.menu_padding, separator_y),
+                             settings.menu_line_width)
+
+            # Specialization buttons row 3
+            specialize_button_y = separator_y + settings.menu_padding
+
+            specialize_fuel_x = menu_x + settings.menu_padding
+            self.specialize_fuel_rect = self.draw_specialization_button(screen, specialize_fuel_x,
+                                                                        specialize_button_y, mini_fuel_icon,
+                                                                        specialize_buttons_active)
+
+            specialize_population_x = (specialize_fuel_x + settings.resource_button_width +
+                                       settings.resource_button_padding)
+            self.specialize_population_rect = self.draw_specialization_button(screen, specialize_population_x,
+                                                                              specialize_button_y, mini_population_icon,
+                                                                              specialize_buttons_active)
+
+            specialize_production_x = (specialize_population_x + settings.resource_button_width +
+                                       settings.resource_button_padding)
+            self.specialize_production_rect = self.draw_specialization_button(screen, specialize_production_x,
+                                                                              specialize_button_y, mini_production_icon,
+                                                                              specialize_buttons_active)
 
     def draw_resource_button(self, screen, x, y, icon, text, text_color, button_color, is_active):
         """Draws a resource button and returns its rect"""
@@ -567,10 +598,14 @@ class HexMap:
 
     def draw_specialization_button(self, screen, x, y, icon, is_active):
         """Draws a specialization button (only icon) and returns its rect"""
-        pygame.draw.rect(screen, settings.colors['black'],
+        if is_active:
+            button_color = settings.colors['black']
+        else:
+            button_color = settings.colors['grey']
+        pygame.draw.rect(screen, button_color,
                          (x, y, settings.resource_button_width, settings.resource_button_height))
         pygame.draw.rect(screen, settings.colors['white'],
-                         (x, y, settings.resource_button_сwidth, settings.resource_button_height), 1)
+                         (x, y, settings.resource_button_width, settings.resource_button_height), 1)
         screen.blit(icon, (x + settings.resource_button_width // 2 - icon.get_width() // 2, y))
         return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height) if is_active else None
 
