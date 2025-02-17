@@ -27,7 +27,7 @@ def generate_hex_map(center_coords, radius):
 
     empty_hex = [one_hex for one_hex in hex_map if one_hex["value"] == 0]
 
-    # Creating spaceship with value 4
+    # Creating transport spaceship with value 4
     while True:
         chosen_hex = random.choice(empty_hex)
         if (chosen_hex["r"] == radius or chosen_hex["r"] == -radius or chosen_hex["q"] == radius or
@@ -71,19 +71,20 @@ def generate_hex_map(center_coords, radius):
     planets[-1]["population"] = total_population - assigned_population
 
     # Creating spaceship with value 3
-    chosen_hex = random.choice(empty_hex)
-    chosen_hex["value"] = 3
-    chosen_hex["fuel"] = 100
-    chosen_hex["population"] = 0
-    chosen_hex["production"] = 0
-    empty_hex.remove(chosen_hex)
+    adjacent_hexes = [h for h in empty_hex if hex_distance(h, transport_spaceship_hex) == 1]
+    if adjacent_hexes:
+        chosen_hex = random.choice(adjacent_hexes)
+        chosen_hex["value"] = 3
+        chosen_hex["fuel"] = 100
+        chosen_hex["population"] = 0
+        chosen_hex["production"] = 0
+        empty_hex.remove(chosen_hex)
 
     return hex_map
 
 
 class HexMap:
     """Responsible for the map in the main game"""
-
     def __init__(self, center_cords, radius):
         self.hex_map = generate_hex_map(center_cords, radius)
         self.selected_spaceship = None
@@ -268,14 +269,14 @@ class HexMap:
         self.movement_hex = [h for h in self.hex_map if hex_distance(start_hex, h) == 1 and h["value"] == 0]
 
     def set_planet_specialization(self, specialization):
-        """Sets the planet's specialization and updates the hex_map."""
+        """Sets the planet's specialization and updates the hex_map"""
         if self.selected_planet:
             self.selected_planet["specialization"] = specialization
             self.save_map()
             self.can_specialize = False
 
     def transfer_population_to_ship(self, amount):
-        """Transfers population from the selected planet to the nearest spaceship."""
+        """Transfers population from the selected planet to the nearest spaceship"""
         nearest_spaceship = None
 
         for other_hex in self.hex_map:
@@ -681,7 +682,7 @@ class HexMap:
         self.exit_button_rect = pygame.Rect(button_x, button_y, settings.exit_button_size, settings.exit_button_size)
 
     def add_resource_to_spaceship(self, resource_type, amount):
-        """Adds resources to the nearest spaceship."""
+        """Adds resources to the nearest spaceship"""
         for other_hex in self.hex_map:
             if other_hex["value"] == 3:
                 if resource_type in other_hex:
