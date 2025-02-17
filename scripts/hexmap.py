@@ -36,6 +36,7 @@ def generate_hex_map(center_cords, radius):
         chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
         chosen_hex["population"] = random.randint(1000, 2000)
         chosen_hex["specialization"] = None
+        chosen_hex["is_planet_active"] = True
         empty_hex.remove(chosen_hex)
 
     # creating spaceship with value 3
@@ -100,42 +101,63 @@ class HexMap:
 
     def get_clicked_hex(self, pos):
         mouse_x, mouse_y = pos
-        nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
 
         # Planet menu buttons
         if self.planet_menu_active:
-
             # Exit button click
             if self.exit_button_rect and self.exit_button_rect.collidepoint(pos):
                 self.planet_menu_active = False
                 self.selected_planet = None
+                return
 
             # Fuel buttons click
-            elif self.fuel_button_100_rect and self.fuel_button_100_rect.collidepoint(pos):
+            elif (self.fuel_button_100_rect and self.fuel_button_100_rect.collidepoint(pos) and
+                  self.selected_planet['is_planet_active']):
                 self.add_resource_to_spaceship("fuel", 100)
-            elif self.fuel_button_10_rect and self.fuel_button_10_rect.collidepoint(pos):
+                self.selected_planet['is_planet_active'] = False
+                return
+            elif (self.fuel_button_10_rect and self.fuel_button_10_rect.collidepoint(pos) and
+                  self.selected_planet['is_planet_active']):
                 self.add_resource_to_spaceship("fuel", 10)
+                self.selected_planet['is_planet_active'] = False
+                return
 
             # Population buttons click
-            elif self.population_button_100_rect and self.population_button_100_rect.collidepoint(pos):
+            elif (self.population_button_100_rect and self.population_button_100_rect.collidepoint(pos) and
+                  self.selected_planet['is_planet_active']):
                 self.transfer_population_to_ship(100)
-            elif self.population_button_10_rect and self.population_button_10_rect.collidepoint(pos):
+                self.selected_planet['is_planet_active'] = False
+                return
+            elif (self.population_button_10_rect and self.population_button_10_rect.collidepoint(pos) and
+                  self.selected_planet['is_planet_active']):
                 self.transfer_population_to_ship(10)
+                self.selected_planet['is_planet_active'] = False
+                return
 
             # Production buttons click
-            elif self.production_button_100_rect and self.production_button_100_rect.collidepoint(pos):
+            elif (self.production_button_100_rect and self.production_button_100_rect.collidepoint(pos) and
+                 self.selected_planet['is_planet_active']):
                 self.add_resource_to_spaceship("production", 100)
-            elif self.production_button_10_rect and self.production_button_10_rect.collidepoint(pos):
+                self.selected_planet['is_planet_active'] = False
+                return
+            elif (self.production_button_10_rect and self.production_button_10_rect.collidepoint(pos) and
+                 self.selected_planet['is_planet_active']):
                 self.add_resource_to_spaceship("production", 10)
+                self.selected_planet['is_planet_active'] = False
+                return
 
             # Specialization buttons click
             elif self.specialize_fuel_rect and self.specialize_fuel_rect.collidepoint(pos):
                 self.set_planet_specialization("fuel")
+                return
             elif self.specialize_population_rect and self.specialize_population_rect.collidepoint(pos):
                 self.set_planet_specialization("population")
+                return
             elif self.specialize_production_rect and self.specialize_production_rect.collidepoint(pos):
                 self.set_planet_specialization("production")
+                return
 
+            # If none of the buttons were clicked, exit the function
             return
 
         # Transport menu buttons
@@ -145,6 +167,7 @@ class HexMap:
                 self.selected_transport = None
             return
 
+        nearest_hex = min(self.hex_map, key=lambda h: (mouse_x - h["x"]) ** 2 + (mouse_y - h["y"]) ** 2)
         # Selected hexagon
         if self.selected_spaceship and nearest_hex in self.movement_hex and not self.spaceship_moved_this_turn:
             self.move_spaceship(nearest_hex)
@@ -182,6 +205,9 @@ class HexMap:
 
     def select_transport_spaceship(self, hex):
         self.selected_transport = hex
+        for other_hex in self.hex_map:
+            if other_hex["value"] == 2:
+                other_hex["is_planet_active"] = True
         self.transport_menu_active = True
         self.selected_spaceship = None
         self.movement_hex = []
@@ -193,9 +219,9 @@ class HexMap:
         self.planet_menu_active = False
         self.transport_menu_active = False
 
-    def can_select_object(self, planet_hex):
+    def can_select_object(self, object_hex):
         for other_hex in self.hex_map:
-            if other_hex["value"] == 3 and hex_distance(planet_hex, other_hex) == 1:
+            if other_hex["value"] == 3 and hex_distance(object_hex, other_hex) == 1:
                 return True
         return False
 
@@ -416,14 +442,21 @@ class HexMap:
         button_x = menu_x + settings.menu_padding
         button_y = separator_y + settings.menu_padding
 
-        # Determine active/inactive states based on specialization
-        planet_specialization = self.selected_planet.get('specialization')
-        fuel_100_active = planet_specialization and planet_specialization == "fuel"
-        population_100_active = planet_specialization and planet_specialization == "population"
-        production_100_active = planet_specialization and planet_specialization == "production"
-        fuel_10_active = planet_specialization and planet_specialization != "fuel"
-        population_10_active = planet_specialization and planet_specialization != "population"
-        production_10_active = planet_specialization and planet_specialization != "production"
+        # Are the buttons active depending on the specialization
+        fuel_100_active = False
+        population_100_active = False
+        production_100_active = False
+        fuel_10_active = False
+        population_10_active = False
+        production_10_active = False
+
+        if specialization and self.selected_planet.get('is_planet_active'):
+            fuel_100_active = specialization == "fuel"
+            population_100_active = specialization == "population"
+            production_100_active = specialization == "production"
+            fuel_10_active = specialization != "fuel"
+            population_10_active = specialization != "population"
+            production_10_active = specialization != "production"
 
         # Resources buttons row 1
         self.fuel_button_100_rect = self.draw_resource_button(screen, button_x, button_y, mini_fuel_icon, "+100",
@@ -486,16 +519,16 @@ class HexMap:
 
         specialize_fuel_x = menu_x + settings.menu_padding
         self.specialize_fuel_rect = self.draw_specialization_button(screen, specialize_fuel_x,
-                                                                    specialize_button_y, mini_fuel_icon)
+                                                                    specialize_button_y, mini_fuel_icon, True)
 
         specialize_population_x = specialize_fuel_x + settings.resource_button_width + settings.resource_button_padding
         self.specialize_population_rect = self.draw_specialization_button(screen, specialize_population_x,
-                                                                          specialize_button_y, mini_population_icon)
+                                                                          specialize_button_y, mini_population_icon, True)
 
         specialize_production_x = (specialize_population_x + settings.resource_button_width +
                                    settings.resource_button_padding)
         self.specialize_production_rect = self.draw_specialization_button(screen, specialize_production_x,
-                                                                          specialize_button_y, mini_production_icon)
+                                                                          specialize_button_y, mini_production_icon, True)
 
         # Draw exit button
         button_x = menu_x + settings.menu_width - settings.exit_button_size - settings.menu_padding
@@ -532,14 +565,14 @@ class HexMap:
 
         return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height) if is_active else None
 
-    def draw_specialization_button(self, screen, x, y, icon):
+    def draw_specialization_button(self, screen, x, y, icon, is_active):
         """Draws a specialization button (only icon) and returns its rect"""
         pygame.draw.rect(screen, settings.colors['black'],
                          (x, y, settings.resource_button_width, settings.resource_button_height))
         pygame.draw.rect(screen, settings.colors['white'],
-                         (x, y, settings.resource_button_width, settings.resource_button_height), 1)
+                         (x, y, settings.resource_button_сwidth, settings.resource_button_height), 1)
         screen.blit(icon, (x + settings.resource_button_width // 2 - icon.get_width() // 2, y))
-        return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height)
+        return pygame.Rect(x, y, settings.resource_button_width, settings.resource_button_height) if is_active else None
 
     def draw_transport_menu(self, screen):
         # Draw menu background

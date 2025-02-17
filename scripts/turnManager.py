@@ -35,4 +35,5 @@ class TurnManager:
             hexmap.save_map()  # изменить
 
 
+
 turn_manager = TurnManager()
