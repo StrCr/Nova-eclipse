@@ -8,18 +8,18 @@ from scripts.utils import hex_distance, get_hex_points
 from scripts.constants import hex_images, planet_types
 
 
-def generate_hex_map(center_cords, radius):
+def generate_hex_map(center_coords, radius):
     """Generating a map and assigning values to hexagons"""
     hex_map = []
 
     for map_q in range(-radius, radius + 1):
         for map_r in range(max(-radius, -map_q - radius), min(radius, -map_q + radius) + 1):
-            x = center_cords[0] + (map_q * settings.x_offset) + (map_r * settings.x_offset / 2)
-            y = center_cords[1] + (map_r * settings.y_offset)
+            x = center_coords[0] + (map_q * settings.x_offset) + (map_r * settings.x_offset / 2)
+            y = center_coords[1] + (map_r * settings.y_offset)
             if 0 <= x <= settings.width and 0 <= y <= settings.height:
                 hex_map.append({"q": map_q, "r": map_r, "value": 0, "x": x, "y": y})
 
-    # creating sun with value 1
+    # Creating sun with value 1
     sun_hex_coords = [(0, 0), (1, 0), (0, 1), (-1, 1), (-1, 0), (0, -1), (1, -1)]
     for one_hex in hex_map:
         if (one_hex["q"], one_hex["r"]) in sun_hex_coords:
@@ -27,35 +27,55 @@ def generate_hex_map(center_cords, radius):
 
     empty_hex = [one_hex for one_hex in hex_map if one_hex["value"] == 0]
 
-    # creating planets with value 2
+    # Creating spaceship with value 4
+    while True:
+        chosen_hex = random.choice(empty_hex)
+        if (chosen_hex["r"] == radius or chosen_hex["r"] == -radius or chosen_hex["q"] == radius or
+                chosen_hex["q"] == -radius or -chosen_hex["q"] - chosen_hex["r"] == radius or
+                -chosen_hex["q"] - chosen_hex["r"] == -radius):
+            break
+    chosen_hex["value"] = 4
+    chosen_hex["population"] = 0
+    empty_hex.remove(chosen_hex)
+    transport_spaceship_hex = chosen_hex
+
+    # Creating planets with value 2
     planet_types_list = list(planet_types.keys())
     random.shuffle(planet_types_list)
-    for i in range(random.randint(5, 6)):
-        chosen_hex = random.choice(empty_hex)
+    planet_count = random.randint(5, 6)
+    total_population = 6000
+    population_options = [1100, 1200, 1300] if planet_count == 5 else [900, 1000, 1100]
+
+    planets = []
+    for _ in range(planet_count):
+        while True:
+            chosen_hex = random.choice(empty_hex)
+            if hex_distance(chosen_hex, transport_spaceship_hex) >= 4 and all(
+                    hex_distance(chosen_hex, p) >= 3 for p in planets) and hex_distance(chosen_hex, next(
+                    h for h in hex_map if h["value"] == 1)) >= 2:
+                break
         chosen_hex["value"] = 2
-        chosen_hex["planet_type"] = planet_types_list[i % len(planet_types_list)]
-        chosen_hex["population"] = random.randint(10, 20)
+        chosen_hex["planet_type"] = planet_types_list[_ % len(planet_types_list)]
         chosen_hex["specialization"] = None
         chosen_hex["is_planet_active"] = True
+        planets.append(chosen_hex)
         empty_hex.remove(chosen_hex)
 
-    # creating spaceship with value 3
+    assigned_population = 0
+    for i in range(len(planets) - 1):
+        pop = random.choice(
+            [p for p in population_options if assigned_population + p + min(population_options) <= total_population])
+        planets[i]["population"] = pop
+        assigned_population += pop
+
+    planets[-1]["population"] = total_population - assigned_population
+
+    # Creating spaceship with value 3
     chosen_hex = random.choice(empty_hex)
     chosen_hex["value"] = 3
     chosen_hex["fuel"] = 100
     chosen_hex["population"] = 0
     chosen_hex["production"] = 0
-    empty_hex.remove(chosen_hex)
-
-    # creating spaceship with value 4
-    possible_locations = [hex_tile for hex_tile in empty_hex if
-                          (hex_tile["r"] == settings.map_radius or hex_tile["r"] == -settings.map_radius or
-                           hex_tile["q"] == settings.map_radius or hex_tile["q"] == -settings.map_radius) or
-                          -hex_tile["q"] - hex_tile["r"] == settings.map_radius or
-                          -hex_tile["q"] - hex_tile["r"] == -settings.map_radius]
-    chosen_hex = random.choice(possible_locations)
-    chosen_hex["value"] = 4
-    chosen_hex["population"] = 0
     empty_hex.remove(chosen_hex)
 
     return hex_map
@@ -300,9 +320,9 @@ class HexMap:
 
     def draw_info_bar(self, screen, turn):
         pygame.draw.rect(screen, settings.colors['black'], (0, 0, settings.width, settings.info_bar_height))
-        total_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map if one_hex.get("value") == 3)
-        total_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
-        total_fuel = sum(one_hex.get("fuel", 0) for one_hex in self.hex_map)
+        ship_population = sum(one_hex.get("population", 0) for one_hex in self.hex_map if one_hex.get("value") == 3)
+        ship_production = sum(one_hex.get("production", 0) for one_hex in self.hex_map)
+        ship_fuel = sum(one_hex.get("fuel", 0) for one_hex in self.hex_map)
 
         info_bar_x_offset = 5
         info_bar_y_offset = 5
@@ -310,21 +330,21 @@ class HexMap:
         # Draw Population
         population_icon = pygame.transform.scale(hex_images['population'], (settings.icon_size, settings.icon_size))
         screen.blit(population_icon, (info_bar_x_offset, info_bar_y_offset))
-        population_text = self.font.render(f" {total_population}", True, settings.colors['white'])
+        population_text = self.font.render(f" {ship_population}", True, settings.colors['white'])
         screen.blit(population_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
         info_bar_x_offset += settings.icon_size + population_text.get_width() + 10
 
         # Draw Production
         production_icon = pygame.transform.scale(hex_images['production'], (settings.icon_size, settings.icon_size))
         screen.blit(production_icon, (info_bar_x_offset, info_bar_y_offset))
-        production_text = self.font.render(f" {total_production}", True, settings.colors['white'])
+        production_text = self.font.render(f" {ship_production}", True, settings.colors['white'])
         screen.blit(production_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
         info_bar_x_offset += settings.icon_size + production_text.get_width() + 10
 
         # Draw Power
         power_icon = pygame.transform.scale(hex_images['fuel'], (settings.icon_size, settings.icon_size))
         screen.blit(power_icon, (info_bar_x_offset, info_bar_y_offset))
-        power_text = self.font.render(f" {total_fuel}", True, settings.colors['white'])
+        power_text = self.font.render(f" {ship_fuel}", True, settings.colors['white'])
         screen.blit(power_text, (info_bar_x_offset + settings.icon_size, info_bar_y_offset))
         info_bar_x_offset += settings.icon_size + power_text.get_width() + 10
 
