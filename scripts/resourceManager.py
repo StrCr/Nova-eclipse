@@ -3,10 +3,17 @@ import sys
 import pygame
 
 
+def resource_path(relative_path):
+    """Возвращает путь к файлу в .py и в .exe."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
 class ResourceManager:
     def __init__(self, images_dir):
-        self.images_dir = images_dir
-        self.loaded_images = {}  # Cash for loaded images
+        self.images_dir = resource_path(images_dir)
+        self.loaded_images = {}
 
     def load_image(self, name, colorkey=None):
         if name in self.loaded_images:
@@ -23,7 +30,7 @@ class ResourceManager:
                 colorkey = image.get_at((0, 0))
             image.set_colorkey(colorkey)
 
-        self.loaded_images[name] = image  # Cash the image
+        self.loaded_images[name] = image
         return image
 
     def load_sound(self, name):

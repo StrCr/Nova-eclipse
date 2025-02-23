@@ -9,7 +9,7 @@ class TurnManager:
     def __init__(self):
         self.game_over = False
         self.turn_count = 0
-        self.max_turns = 10
+        self.max_turns = 50
         self.turn_button_rect = pygame.Rect(settings.width - settings.turn_button_size,
                                             settings.height - settings.turn_button_size,
                                             settings.turn_button_size, settings.turn_button_size)
